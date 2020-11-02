@@ -1,0 +1,9 @@
+[Unit]
+Description = Starting Check Certs Bot
+
+[Service]
+ExecStart = /home/sem/python/check_certs_bot/check_certs_bot.py
+Type=simple
+
+[Install]
+WantedBy = multi-user.target
