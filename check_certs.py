@@ -22,7 +22,7 @@ def get_all_dns(dname):
 def get_dns_request(dname, rtype):
     a = []
     try:
-        answers = dns.resolver.query(dname, rtype)
+        answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
         print('No DNS record %s found for %s' % (rtype,fqdn))
         sys.exit(0)
