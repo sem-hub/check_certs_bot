@@ -26,7 +26,7 @@ for r in cur.fetchall():
             print('Skipped')
         continue
     try:
-        result = subprocess.check_output(['/usr/bin/python', prog_dir+'/check_certs.py', '--quiet', '--print-id', '--warn-before-expired', r[5], r[1], r[2], r[3]], stderr=subprocess.STDOUT)
+        result = subprocess.check_output(['/usr/bin/python3', prog_dir+'/check_certs.py', '--quiet', '--print-id', '--warn-before-expired', r[5], r[1], r[2], r[3]], stderr=subprocess.STDOUT)
     except:
         result = b''
 
