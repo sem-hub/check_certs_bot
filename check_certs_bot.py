@@ -144,7 +144,7 @@ class CheckCertBot:
         message_filter_handler = MessageHandler(Filters.text, self.message)
         dispatcher.add_handler(message_filter_handler)
 
-        # Run job every 60 seconds
+        # Run job every 10 seconds
         queue_job = job_queue.run_repeating(self.check_queue, interval=10, first=10)
 
         self.db_connect_and_create_table()
