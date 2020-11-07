@@ -9,7 +9,7 @@ import sqlite3
 import subprocess
 import queue
 import threading
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 from os import sys, path
 
 work_dir = path.dirname(path.abspath(__file__))
@@ -39,6 +39,7 @@ or
 /reset  - reset all periodical checking list.
 
 Allowed protocols: *https*, *smtp* and *plain*.
+For *smtp* default port is 25 and you can specify domain name not FQDN. It will be checked for MX DNS records first.
 *plain* means any protocol over ssl (ssl handshake before any protocol conversation)
 '''
 
@@ -56,46 +57,34 @@ cert_id text
 
 prog_dir = path.dirname(path.abspath(__file__))
 
-def parse_url(str):
-    proto = ''
-    fqdn = ''
-    port = ''
-    if str.find('://'):
-        o = urlparse(str)
-        proto = o.scheme
-        n = o.netloc.find(':')
-        if n > -1:
-            (fqdn, port) = (o.netloc[:n], o.netloc[n+1:])
-        else:
-            fqdn = o.netloc
-            if proto == 'https':
-                port = '443'
-            if proto == 'smtp':
-                port = '25'
-    return (proto, fqdn, port)
-
-def check_validity(proto, fqdn, port):
+def check_validity(proto: str, fqdn: str, port: int):
     error = ''
     valid_proto = ('https', 'smtp', 'plain')
     if proto not in valid_proto:
         error = 'Unknown protocol: %s ' % proto
     if not is_valid_fqdn(fqdn):
         error = error+'Bad server FQDN: %s ' % fqdn
-    if not port.isdigit():
-        error = error+'Bad port number: %s ' % port
+    if port < 1 or port > 65535:
+        error = error+'Bad port number: %d ' % port
     return error
 
 def parse_message(message):
     msg = message.strip().lower().encode('ASCII', 'replace').decode('utf-8')
-    proto = ''
+    # defaults
+    proto = 'https'
     fqdn = ''
-    port = ''
+    port = 443
+    error = ''
     if msg.find('://') > -1:
-        (proto, fqdn, port) = parse_url(msg)
+        try:
+            nt = urlsplit(msg)
+            proto = nt.scheme
+            fqdn = nt.hostname
+            if nt.port:
+                port = nt.port
+        except ValueError as err:
+            error = str(err)
     else:
-        # defaults
-        proto = 'https'
-        port = '443'
         n=msg.find(' ')
         if n == -1:
             fqdn = msg
@@ -103,13 +92,18 @@ def parse_message(message):
             (fqdn, proto) = msg.split(' ', 1)
             n = proto.find(' ')
             if n > -1:
-                (proto, port) = proto.split(' ', 1)
+                (proto, portStr) = proto.split(' ', 1)
+                try:
+                    port = int(portStr)
+                except ValueError as err:
+                    error = str(err)
             else:
                 if proto == 'smtp':
-                    port = '25'
-    error = check_validity(proto, fqdn, port)
+                    port = 25
+    if not error:
+        error = check_validity(proto, fqdn, port)
 
-    return (error, proto, fqdn, port)
+    return (error, proto, fqdn, str(port))
 
 class RPyCService(rpyc.Service):
     def exposed_add_message(self, chat_id, msg):
