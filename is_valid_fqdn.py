@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import re
 
 def is_valid_fqdn(fqdn):
