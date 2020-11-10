@@ -13,7 +13,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from get_cert_from_server import get_chain_from_server
-from verify_cert import verify_cert, match_domain
+from verify_cert import verify_cert, match_domain, get_days_before_expired
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
 
@@ -97,39 +97,42 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
         if not quiet:
             print('Got %d certificates in chain' % len(chain))
         cert = chain[0]
-        if not cert0_id:
+        is_new_cert = not cert0_id
+        if is_new_cert:
             cert0_id = cert.get_serial_number()
+
+        # Do not check the same certificate again
+        if not is_new_cert and cert.get_serial_number() == cert0_id:
+            if not quiet:
+                print('Certificate is the same')
+        else:
+            if cert.get_serial_number() != cert0_id:
+                print('Certificates are differ')
+
             error = verify_cert(chain)
+
             if flags['print_id']:
                 print('ID: %X' % cert.get_serial_number())
             if not quiet:
                 print(cert_to_text(cert))
+
+            # If we already have bad certificate don't check it for matching
             if error:
                 print('Certificate error: %s' % error)
-        else:
-            if cert.get_serial_number() != cert0_id:
-                print('Certificates are differ')
-                error = verify_cert(chain)
-                if flags['print_id']:
-                    print('ID: %X' % cert.get_serial_number())
-                if not quiet:
-                    print(cert_to_text(cert))
-                if error:
-                    print('Certificate error: %s' % error)
             else:
-                # Do not check for hostname mismatch
-                error = 'the same'
-                if not quiet:
-                    print('Certificate is the same')
-
-        if not error:
-            if not match_domain(fqdn, cert):
-                # XXX print domain list from certificate if verbose or debug
-                print('Certificate error: Host name mismatched with any ' + \
-                        'domain in certificate')
-            else:
-                if not quiet:
-                    print('Certificate is good')
+                if not match_domain(fqdn, cert):
+                    # XXX print domain list from certificate if verbose or debug
+                    print('Certificate error: Host name mismatched with any ' + \
+                            'domain in certificate')
+                else:
+                    days_before_expired = get_days_before_expired(cert)
+                    if flags['warn_before_expired'] and \
+                        days_before_expired <= flags['warn_before_expired']:
+                            print('Certificate fill expired after %d days' %
+                                    days_before_expired)
+                    else:
+                        if not quiet:
+                            print('Certificate is good')
 
     return True
 
@@ -146,7 +149,7 @@ if __name__ == '__main__':
     parser.add_argument('-id', '--print-id', action='store_true',
                         help='Print certificate ID. Useful with --quiet')
     parser.add_argument('-w', '--warn-before-expired', type=int, default=5,
-                        help='Make a warning before certificate expired')
+        help='Make a warning before certificate expired. Default: 5 days. 0 for off.')
     parser.add_argument('-4', '--only-ipv4', action='store_true',
                         help='Use only IPv4 addresses for checks')
     parser.add_argument('-6', '--only-ipv6', action='store_true',
