@@ -25,7 +25,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str):
         conn.connect((addr, port))
         conn.setblocking(1)
     except Exception as msg:
-        return (('Connection error: %s' % str(msg)), None)
+        return ('%s: Connection error: %s' % (addr, str(msg)), None)
 
     if proto == 'smtp':
         # Send EHLO, STARTTLS. Ignore server answer (XXX).
@@ -40,12 +40,12 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str):
         conn.do_handshake()
     except SSL.Error as err:
         conn.close()
-        return (('SSL do_handshake error: %s' % str(err)), None)
+        return ('%s: SSL do_handshake error: %s' % (addr, str(err)), None)
     # Get unverified certificate in binary form
     chain = conn.get_peer_cert_chain()
     conn.close()
     if not chain:
-        return('Get certificate chain error', None)
+        return('%s: Get certificate chain error' % addr, None)
 
     return (None, chain)
 
