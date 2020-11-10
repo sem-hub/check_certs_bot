@@ -1,6 +1,7 @@
 import datetime
 from pytz import UTC
 from os import sys, path
+from OpenSSL import crypto
 
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
