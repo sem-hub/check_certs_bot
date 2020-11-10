@@ -21,13 +21,13 @@ def get_all_dns(dname):
     a1 = get_dns_request(dname, 'AAAA')
     a2 = get_dns_request(dname, 'A')
 
-    r = []
+    r = list()
     for rdata in a1+a2:
         r.append(rdata.to_text())
     return r
 
 def get_dns_request(dname, rtype):
-    a = []
+    a = list()
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
@@ -47,7 +47,7 @@ def check_cert(fqdn: str, port: int, proto: str, debug, quiet, print_id, warn_be
         print('Host name is invalid: %d' % fqdn)
         return False
 
-    addresses = []
+    addresses = list()
 
     if proto == 'smtp':
         if not quiet:
@@ -131,6 +131,7 @@ if __name__ == '__main__':
     parser.add_argument('--print-id', action='store_true')
     parser.add_argument('--warn-before-expired', type=int, default=5)
     args = parser.parse_args()
+    fargs = list()
     fqdn = args.fqdn[0]
     debug = args.debug
     quiet = args.quiet

@@ -10,8 +10,8 @@ from escape_markdown import escape_markdown
 def decode_generalized_time(gt):
     return datetime.datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
 
-def list_of_tuples(indent, lt):
-    text = []
+def list_of_tuples(indent: str, lt: tuple):
+    text = list()
     d = {'C': 'countryName',
          'O': 'organizationName',
          'ST': 'stateOrProvinceName',
@@ -27,8 +27,8 @@ def list_of_tuples(indent, lt):
 
     return '\n'.join(map(str, text))
 
-def x509_alt_names(indent, st):
-    text = []
+def x509_alt_names(indent: str, st: str):
+    text = list()
     for s in st.split(','):
         s = s.replace(' ', '')
         s = s.replace(':', ': ')
@@ -36,8 +36,8 @@ def x509_alt_names(indent, st):
 
     return '\n'.join(map(str, text))
 
-def cert_to_text(x509):
-    text = []
+def cert_to_text(x509: crypto.X509):
+    text = list()
     issued_dt = decode_generalized_time(x509.get_notBefore())
     expired_dt = decode_generalized_time(x509.get_notAfter())
     now_aware = datetime.datetime.utcnow().replace(tzinfo=UTC)

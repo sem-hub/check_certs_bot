@@ -180,7 +180,7 @@ class CheckCertBot:
     def list_cmd(self, bot, update):
         # XXX datetime('Never', 'localtime') == NoneType
         self.cur.execute("SELECT datetime(when_added, 'localtime'), hostname, proto, port, warn_before_expired, datetime(last_checked, 'localtime'), status FROM servers WHERE chat_id=?", (str(update.message.chat_id),))
-        output = []
+        output = list()
         for r in self.cur.fetchall():
             output.append('|'.join(r))
         if len(output) == 0:
