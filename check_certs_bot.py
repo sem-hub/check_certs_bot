@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from __future__ import print_function
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
