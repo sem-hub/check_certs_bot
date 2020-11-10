@@ -17,16 +17,24 @@ from verify_cert import verify_cert, match_domain
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
 
-def get_all_dns(dname):
-    a1 = get_dns_request(dname, 'AAAA')
-    a2 = get_dns_request(dname, 'A')
+def get_all_dns(dname: str, only_ipv4: bool, only_ipv6: bool, only_first: bool):
+    if only_ipv4:
+        a1 = list()
+    else:
+        a1 = get_dns_request(dname, 'AAAA')
+    if only_ipv6:
+        a2 = list()
+    else:
+        a2 = get_dns_request(dname, 'A')
 
     r = list()
     for rdata in a1+a2:
         r.append(rdata.to_text())
+        if only_first:
+            break
     return r
 
-def get_dns_request(dname, rtype):
+def get_dns_request(dname: str, rtype: str):
     a = list()
     try:
         answers = dns.resolver.resolve(dname, rtype)
@@ -40,10 +48,11 @@ def get_dns_request(dname, rtype):
             a.append(rdata)
     return a
 
-def check_cert(fqdn: str, port: int, proto: str, fargs):
-    debug = fargs['debug']
-    quiet = fargs['quiet']
-    print_id = fargs['print_id']
+def check_cert(fqdn: str, port: int, proto: str, flags):
+    # For fast using
+    debug = flags['debug']
+    quiet = flags['quiet']
+
     try:
         dname = dns.name.from_text(fqdn)
     except EmptyLabel:
@@ -59,12 +68,13 @@ def check_cert(fqdn: str, port: int, proto: str, fargs):
             mx_host = rdata.exchange.to_text()[:-1]
             if not quiet:
                 print('  %s' % mx_host)
-            for addr in get_all_dns(rdata.exchange):
+            for addr in get_all_dns(rdata.exchange, flags['only_ipv4'],
+                    flags['only_ipv6'], flags['only_one']):
                 addresses.append((mx_host,addr))
 
     # if we don't have addresses from MX records
     if len(addresses) == 0:
-        for addr in get_all_dns(dname):
+        for addr in get_all_dns(dname, flags['only_ipv4'], flags['only_ipv6'], flags['only_one']):
             addresses.append((fqdn,addr))
 
     if len(addresses) == 0:
@@ -90,7 +100,7 @@ def check_cert(fqdn: str, port: int, proto: str, fargs):
         if not cert0_id:
             cert0_id = cert.get_serial_number()
             error = verify_cert(chain)
-            if print_id:
+            if flags['print_id']:
                 print('ID: %X' % cert.get_serial_number())
             if not quiet:
                 print(cert_to_text(cert))
@@ -100,7 +110,7 @@ def check_cert(fqdn: str, port: int, proto: str, fargs):
             if cert.get_serial_number() != cert0_id:
                 print('Certificates are differ')
                 error = verify_cert(chain)
-                if print_id:
+                if flags['print_id']:
                     print('ID: %X' % cert.get_serial_number())
                 if not quiet:
                     print(cert_to_text(cert))
@@ -129,18 +139,31 @@ if __name__ == '__main__':
     parser.add_argument('fqdn', nargs=1)
     parser.add_argument('proto', nargs='?')
     parser.add_argument('port', nargs='?', type=int)
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--quiet', action='store_true')
-    parser.add_argument('--print-id', action='store_true')
-    parser.add_argument('--warn-before-expired', type=int, default=5)
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='Print much info for debugging')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Print only error messages')
+    parser.add_argument('-id', '--print-id', action='store_true',
+                        help='Print certificate ID. Useful with --quiet')
+    parser.add_argument('-w', '--warn-before-expired', type=int, default=5,
+                        help='Make a warning before certificate expired')
+    parser.add_argument('-4', '--only-ipv4', action='store_true',
+                        help='Use only IPv4 addresses for checks')
+    parser.add_argument('-6', '--only-ipv6', action='store_true',
+                        help='Use only IPv6 addresses for checks')
+    parser.add_argument('-1', '--only-one', action='store_true',
+                        help='Use only first IP for checking')
     args = parser.parse_args()
     fqdn = args.fqdn[0]
 
-    fargs = dict()
-    fargs['debug'] = args.debug
-    fargs['quiet'] = args.quiet
-    fargs['print_id'] = args.print_id
-    fargs['warn_before_expired'] = args.warn_before_expired
+    flags = dict()
+    flags['debug'] = args.debug
+    flags['quiet'] = args.quiet
+    flags['print_id'] = args.print_id
+    flags['warn_before_expired'] = args.warn_before_expired
+    flags['only_ipv4'] = args.only_ipv4
+    flags['only_ipv6'] = args.only_ipv6
+    flags['only_one'] = args.only_one
 
     if args.proto != None:
         proto = args.proto
@@ -160,4 +183,4 @@ if __name__ == '__main__':
     if not args.quiet:
         print('proto=%s fqdn=%s port=%d' % (proto, fqdn, port))
 
-    check_cert(fqdn, port, proto, fargs)
+    check_cert(fqdn, port, proto, flags)
