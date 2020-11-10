@@ -187,7 +187,7 @@ class CheckCertBot:
             output = ['Empty']
         else:
             output.insert(0, '*When added|hostname|proto|port|days to warn before expire|last check date|last check status*')
-        bot.send_message(chat_id=update.message.chat_id, text='\n'.join(output))
+        bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text='\n'.join(output))
 
     def add_cmd(self, bot, update, args):
         (error, proto, fqdn, port) = parse_message(' '.join(args))
