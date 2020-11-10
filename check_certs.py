@@ -15,6 +15,7 @@ sys.path.append(work_dir)
 from get_cert_from_server import get_chain_from_server
 from verify_cert import verify_cert
 from cert_to_text import cert_to_text
+from escape_markdown import escape_markdown
 
 def get_all_dns(dname):
     a1 = get_dns_request(dname, 'AAAA')
@@ -79,6 +80,7 @@ def check_cert(fqdn: str, port: int, proto: str, debug, quiet, print_id, warn_be
         if error:
             print('Error: %s' % error)
             continue
+        # XXX debug only
         if not quiet:
             print('Got %d certificates in chain' % len(chain))
         cert = chain[0]
@@ -106,7 +108,7 @@ def check_cert(fqdn: str, port: int, proto: str, debug, quiet, print_id, warn_be
         if not error:
             if fqdn != cert.get_subject().commonName:
                 print('Certificate error: Host name mismatch: %s != %s' %
-                        (fqdn, cert.get_subject().commonName))
+                        (fqdn, escape_markdown(cert.get_subject().commonName)))
             else:
                 if not quiet:
                     print('Certificate is good')
