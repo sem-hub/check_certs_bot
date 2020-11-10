@@ -40,7 +40,10 @@ def get_dns_request(dname, rtype):
             a.append(rdata)
     return a
 
-def check_cert(fqdn: str, port: int, proto: str, debug, quiet, print_id, warn_before_expired):
+def check_cert(fqdn: str, port: int, proto: str, fargs):
+    debug = fargs['debug']
+    quiet = fargs['quiet']
+    print_id = fargs['print_id']
     try:
         dname = dns.name.from_text(fqdn)
     except EmptyLabel:
@@ -131,12 +134,14 @@ if __name__ == '__main__':
     parser.add_argument('--print-id', action='store_true')
     parser.add_argument('--warn-before-expired', type=int, default=5)
     args = parser.parse_args()
-    fargs = list()
     fqdn = args.fqdn[0]
-    debug = args.debug
-    quiet = args.quiet
-    print_id = args.print_id
-    warn_before_expired = args.warn_before_expired
+
+    fargs = dict()
+    fargs['debug'] = args.debug
+    fargs['quiet'] = args.quiet
+    fargs['print_id'] = args.print_id
+    fargs['warn_before_expired'] = args.warn_before_expired
+
     if args.proto != None:
         proto = args.proto
     else:
@@ -152,7 +157,7 @@ if __name__ == '__main__':
     else:
         port = args.port
 
-    if not quiet:
+    if not args.quiet:
         print('proto=%s fqdn=%s port=%d' % (proto, fqdn, port))
 
-    check_cert(fqdn, port, proto, debug, quiet, print_id, warn_before_expired)
+    check_cert(fqdn, port, proto, fargs)
