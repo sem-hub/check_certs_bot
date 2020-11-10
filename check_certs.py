@@ -13,7 +13,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from get_cert_from_server import get_chain_from_server
-from verify_cert import verify_cert
+from verify_cert import verify_cert, match_domain
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
 
@@ -87,6 +87,8 @@ def check_cert(fqdn: str, port: int, proto: str, debug, quiet, print_id, warn_be
         if not cert0_id:
             cert0_id = cert.get_serial_number()
             error = verify_cert(chain)
+            if print_id:
+                print('ID: %X' % cert.get_serial_number())
             if not quiet:
                 print(cert_to_text(cert))
             if error:
@@ -95,6 +97,8 @@ def check_cert(fqdn: str, port: int, proto: str, debug, quiet, print_id, warn_be
             if cert.get_serial_number() != cert0_id:
                 print('Certificates are differ')
                 error = verify_cert(chain)
+                if print_id:
+                    print('ID: %X' % cert.get_serial_number())
                 if not quiet:
                     print(cert_to_text(cert))
                 if error:
@@ -106,9 +110,10 @@ def check_cert(fqdn: str, port: int, proto: str, debug, quiet, print_id, warn_be
                     print('Certificate is the same')
 
         if not error:
-            if fqdn != cert.get_subject().commonName:
-                print('Certificate error: Host name mismatch: %s != %s' %
-                        (fqdn, escape_markdown(cert.get_subject().commonName)))
+            if not match_domain(fqdn, cert):
+                # XXX print domain list from certificate if verbose or debug
+                print('Certificate error: Host name mismatched with any ' + \
+                        'domain in certificate')
             else:
                 if not quiet:
                     print('Certificate is good')

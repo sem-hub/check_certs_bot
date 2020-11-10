@@ -2,6 +2,34 @@ import certifi
 import pem
 from OpenSSL import crypto
 
+def get_domains_from_cert(cert: crypto.X509):
+    domains = set()
+    # Look first onto commonName
+    domains.add(cert.get_subject().commonName)
+    for i in range(cert.get_extension_count()):
+        if cert.get_extension(i).get_short_name() == b'subjectAltName':
+            alt_names = cert.get_extension(i)._subjectAltNameString()
+            if ',' in alt_names:
+                for ds in alt_names.split(', '):
+                    domains.add(ds.replace('DNS:',''))
+            else:
+                domains.add(alt_names.replace('DNS:',''))
+
+    return domains
+
+def match_domain(fqdn: str, cert: crypto.X509):
+    # get domains list from the certificate
+    domains = get_domains_from_cert(cert)
+    for d in domains:
+        if fqdn == d:
+            return True
+        if '*' in fqdn:
+            rx= '^'+d.replace('.','\.').replace('*','[^\.]+')+'$'
+            re.compile(rx)
+            if re.match(fqdn):
+                return True
+    return False
+
 def verify_cert(certs):
     error = None
     store = crypto.X509Store()
