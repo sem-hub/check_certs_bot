@@ -32,8 +32,8 @@ def get_dns_request(dname: str, rtype: str):
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
-        print('No DNS record %s found for %s' % (rtype,fqdn))
-        sys.exit(0)
+        print('No DNS record %s found for %s' % (rtype,dname))
+        return []
     except dns.resolver.NoAnswer:
         pass
     else:
