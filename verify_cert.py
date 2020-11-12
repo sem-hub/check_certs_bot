@@ -4,6 +4,7 @@ import pem
 from pytz import UTC
 from os import sys, path
 from OpenSSL import crypto
+from ocspchecker import ocspchecker
 
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
@@ -43,10 +44,11 @@ def match_domain(fqdn: str, cert: crypto.X509):
                 return True
     return False
 
-def verify_cert(certs):
+def verify_cert(certs_to_check):
     error = None
     store = crypto.X509Store()
-    if type(certs) == list:
+    if type(certs_to_check) == list:
+        certs = certs_to_check.copy()
         cert = certs.pop(0)
         # Recursive check all certificates in the chain
         for i in range(len(certs)):
@@ -54,7 +56,7 @@ def verify_cert(certs):
             if not err:
                 store.add_cert(certs[i])
     else:
-        cert = certs
+        cert = certs_to_check
 
     # Read CA cetrs from a bundle
     with open(certifi.where(), 'rb') as f:
@@ -72,3 +74,32 @@ def verify_cert(certs):
         error = err.args[0][2]+': '+str(cert.get_subject())
 
     return error
+
+def check_ocsp(cert_chain: list):
+    cert_str_list = list()
+
+    for cert in cert_chain:
+        cert_pem = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
+        cert_str_list.append(cert_pem.decode())
+
+    try:
+        ocsp_url = ocspchecker.extract_ocsp_url(cert_str_list)
+    except Exception as err:
+        return str(err)
+
+    try:
+        ocsp_request = ocspchecker.build_ocsp_request(cert_str_list)
+    except Exception as err:
+        return str(err)
+
+    try:
+        ocsp_response = ocspchecker.get_ocsp_response(ocsp_url, ocsp_request)
+    except Exception as err:
+        return str(err)
+
+    try:
+        ocsp_result = ocspchecker.extract_ocsp_result(ocsp_response)
+    except Exception as err:
+        return str(err)
+
+    return ocsp_result.replace('OCSP Status: ', '')

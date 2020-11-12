@@ -13,7 +13,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from get_cert_from_server import get_chain_from_server
-from verify_cert import verify_cert, match_domain, get_days_before_expired
+from verify_cert import verify_cert, match_domain, get_days_before_expired, check_ocsp
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
 
@@ -86,7 +86,7 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
 
     cert0_id = 0
     for addr in addresses:
-        # if not debug
+        # XXX if not debug
         if not quiet:
             print('%s: %s' % addr)
         error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
@@ -131,6 +131,11 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
                             print('Certificate fill expired after %d days' %
                                     days_before_expired)
                     else:
+                        # ocspcheck can't check only one certificate. It needs a chain
+                        if len(chain) > 1:
+                            result = check_ocsp(chain)
+                            if result != 'GOOD' or not quiet:
+                                print('OCSP check result: %s' % result)
                         if not quiet:
                             print('Certificate is good')
 
