@@ -135,7 +135,7 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
                         if len(chain) > 1:
                             result = check_ocsp(chain)
                             if result != 'GOOD' or not quiet:
-                                print('OCSP check result: %s' % result)
+                                print('OCSP check result: *%s*' % result)
                         if not quiet:
                             print('Certificate is good')
 
