@@ -11,7 +11,7 @@ sys.path.append(work_dir)
 from verify_cert import verify_cert
 
 def get_chain_from_server(hostname: str, addr: str, port: int, proto: str):
-    context = SSL.Context(method=SSL.TLSv1_2_METHOD)
+    context = SSL.Context(method=SSL.SSLv23_METHOD)
 
     # open plain connection
     s_type = socket.AF_INET
