@@ -12,7 +12,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from get_cert_from_server import get_chain_from_server
-from verify_cert import verify_cert, match_domain, get_days_before_expired, check_ocsp
+from verify_cert import verify_cert, match_domain, get_days_before_expired, check_ocsp, check_tlsa
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
 from dns_requests import check_fqdn, get_all_dns
@@ -83,14 +83,16 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
             if not quiet:
                 print(cert_to_text(cert))
 
-            # If we already have bad certificate don't check it for matching
+            # If we have bad certificate here, don't check it for matching
             if error:
                 print('Certificate error: %s' % error)
+                continue
             else:
                 if not match_domain(fqdn, cert):
                     # XXX print domain list from certificate if verbose or debug
                     print('Certificate error: Host name mismatched with any ' + \
                             'domain in certificate')
+                    continue
                 else:
                     days_before_expired = get_days_before_expired(cert)
                     if flags['warn_before_expired'] and \
@@ -103,8 +105,15 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
                             result = check_ocsp(chain)
                             if result != 'GOOD' or not quiet:
                                 print('OCSP check result: *%s*' % result)
+                            if result != 'GOOD':
+                                continue
                         if not quiet:
                             print('Certificate is good')
+        # only good certificate here
+        if check_tlsa(fqdn, port, chain[0]):
+            print('TLSA is OK')
+        else:
+            print('TLSA is not match')
 
     return True
 

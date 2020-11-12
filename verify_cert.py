@@ -1,5 +1,7 @@
 import certifi
 import datetime
+import dns.resolver
+import hashlib
 import pem
 from pytz import UTC
 from os import sys, path
@@ -10,6 +12,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from cert_to_text import decode_generalized_time
+from dns_requests import get_dns_request
 
 def get_days_before_expired(cert: crypto.X509):
     expired_dt = decode_generalized_time(cert.get_notAfter())
@@ -103,3 +106,32 @@ def check_ocsp(cert_chain: list):
         return str(err)
 
     return ocsp_result.replace('OCSP Status: ', '')
+
+def check_tlsa(fqdn: str, port: int, cert: crypto.X509):
+    rr_str = '_'+str(port)+'._tcp.'+fqdn+'.'
+    dname = dns.name.from_text(rr_str)
+    answer = get_dns_request(dname, 'TLSA')
+
+    result = False
+    for a in answer:
+        if a.usage != 3:
+            print('Only usage type 3 is supported')
+            continue
+
+        if a.selector == 1:
+            dump = crypto.dump_publickey(crypto.FILETYPE_ASN1,
+                                              cert.get_pubkey())
+        else:
+            dump = crypto.dump_certificate(crypto.FILETYPE_ASN1, cert)
+
+        if a.mtype == 0:
+            result = a.cert == dump
+        else:
+            if a.mtype == 1:
+                m = hashlib.sha256()
+            if a.mtype == 2:
+                m = hashlib.sha512()
+            m.update(dump)
+            result = a.cert == m.digest()
+
+    return result
