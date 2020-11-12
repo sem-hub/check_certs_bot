@@ -27,12 +27,13 @@ def get_all_dns(fqdn: str, only_ipv4: bool, only_ipv6: bool, only_first: bool):
             break
     return r
 
-def get_dns_request(dname: str, rtype: str):
+def get_dns_request(dname: str, rtype: str, quiet=True):
     a = list()
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
-        print('No DNS record %s found for %s' % (rtype,dname))
+        if not quiet:
+            print('No DNS record %s found for %s' % (rtype,dname))
         return []
     except dns.resolver.NoAnswer:
         pass
@@ -41,3 +42,8 @@ def get_dns_request(dname: str, rtype: str):
             a.append(rdata)
     return a
 
+def get_tlsa_record(fqdn: str, port: int):
+    rr_str = '_'+str(port)+'._tcp.'+fqdn+'.'
+    dname = dns.name.from_text(rr_str)
+
+    return get_dns_request(dname, 'TLSA')

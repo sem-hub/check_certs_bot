@@ -15,7 +15,7 @@ from get_cert_from_server import get_chain_from_server
 from verify_cert import verify_cert, match_domain, get_days_before_expired, check_ocsp, check_tlsa
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
-from dns_requests import check_fqdn, get_all_dns
+from dns_requests import check_fqdn, get_all_dns, get_tlsa_record
 
 def check_cert(fqdn: str, port: int, proto: str, flags):
     # For fast using
@@ -31,7 +31,7 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
     if proto == 'smtp':
         if not quiet:
             print('MX records for %s:' % fqdn)
-        for rdata in get_dns_request(fqdn, 'MX'):
+        for rdata in get_dns_request(fqdn, 'MX', quiet):
             mx_host = rdata.exchange.to_text()[:-1]
             if not quiet:
                 print('  %s' % mx_host)
@@ -110,10 +110,16 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
                         if not quiet:
                             print('Certificate is good')
         # only good certificate here
-        if check_tlsa(fqdn, port, chain[0]):
-            print('TLSA is OK')
+        # Run TLSA check if we have TLSA record
+        if get_tlsa_record(fqdn, port):
+            if not check_tlsa(fqdn, port, chain[0]):
+                print('TLSA is not match')
+            else:
+                if not quiet:
+                    print('TLSA is OK')
         else:
-            print('TLSA is not match')
+            if not quiet:
+                print('No TLSA record found. Check skipped.')
 
     return True
 

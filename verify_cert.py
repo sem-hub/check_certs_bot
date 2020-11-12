@@ -12,7 +12,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from cert_to_text import decode_generalized_time
-from dns_requests import get_dns_request
+from dns_requests import get_tlsa_record
 
 def get_days_before_expired(cert: crypto.X509):
     expired_dt = decode_generalized_time(cert.get_notAfter())
@@ -108,9 +108,7 @@ def check_ocsp(cert_chain: list):
     return ocsp_result.replace('OCSP Status: ', '')
 
 def check_tlsa(fqdn: str, port: int, cert: crypto.X509):
-    rr_str = '_'+str(port)+'._tcp.'+fqdn+'.'
-    dname = dns.name.from_text(rr_str)
-    answer = get_dns_request(dname, 'TLSA')
+    answer = get_tlsa_record(fqdn, port)
 
     result = False
     for a in answer:
