@@ -2,7 +2,6 @@
 
 import argparse
 import datetime
-import dns.resolver
 import ssl
 import sys
 from pytz import UTC
@@ -16,47 +15,15 @@ from get_cert_from_server import get_chain_from_server
 from verify_cert import verify_cert, match_domain, get_days_before_expired, check_ocsp
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
-
-def get_all_dns(dname: str, only_ipv4: bool, only_ipv6: bool, only_first: bool):
-    if only_ipv4:
-        a1 = list()
-    else:
-        a1 = get_dns_request(dname, 'AAAA')
-    if only_ipv6:
-        a2 = list()
-    else:
-        a2 = get_dns_request(dname, 'A')
-
-    r = list()
-    for rdata in a1+a2:
-        r.append(rdata.to_text())
-        if only_first:
-            break
-    return r
-
-def get_dns_request(dname: str, rtype: str):
-    a = list()
-    try:
-        answers = dns.resolver.resolve(dname, rtype)
-    except dns.resolver.NXDOMAIN:
-        print('No DNS record %s found for %s' % (rtype,fqdn))
-        sys.exit(0)
-    except dns.resolver.NoAnswer:
-        pass
-    else:
-        for rdata in answers:
-            a.append(rdata)
-    return a
+from dns_requests import check_fqdn, get_all_dns
 
 def check_cert(fqdn: str, port: int, proto: str, flags):
     # For fast using
     debug = flags['debug']
     quiet = flags['quiet']
 
-    try:
-        dname = dns.name.from_text(fqdn)
-    except EmptyLabel:
-        print('Host name is invalid: %d' % fqdn)
+    if not check_fqdn(fqdn):
+        print('Host name is invalid: %s' % fqdn)
         return False
 
     addresses = list()
@@ -64,7 +31,7 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
     if proto == 'smtp':
         if not quiet:
             print('MX records for %s:' % fqdn)
-        for rdata in get_dns_request(dname, 'MX'):
+        for rdata in get_dns_request(fqdn, 'MX'):
             mx_host = rdata.exchange.to_text()[:-1]
             if not quiet:
                 print('  %s' % mx_host)
@@ -74,12 +41,12 @@ def check_cert(fqdn: str, port: int, proto: str, flags):
 
     # if we don't have addresses from MX records
     if len(addresses) == 0:
-        for addr in get_all_dns(dname, flags['only_ipv4'], flags['only_ipv6'], flags['only_one']):
+        for addr in get_all_dns(fqdn, flags['only_ipv4'], flags['only_ipv6'], flags['only_one']):
             addresses.append((fqdn,addr))
 
     if len(addresses) == 0:
         print('No address records found for %s' % fqdn)
-        sys.exit(0)
+        return False
     else:
         if not quiet:
             print('%d DNS address[es] found for %s:' % (len(addresses), fqdn))
