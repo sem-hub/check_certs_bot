@@ -12,10 +12,12 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from get_cert_from_server import get_chain_from_server
-from verify_cert import verify_cert, match_domain, get_days_before_expired, check_ocsp, check_tlsa
+from verify_cert import verify_cert, match_domain, get_days_before_expired
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
 from dns_requests import get_dns_request, check_fqdn, get_all_dns, get_tlsa_record
+from tlsa import check_tlsa
+from ocsp import check_ocsp
 
 def check_cert(fqdn: str, port: int, proto: str, flags):
     # For fast using
