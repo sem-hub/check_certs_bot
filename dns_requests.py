@@ -1,13 +1,13 @@
 import dns.resolver
 
-def check_fqdn(fqdn: str):
+def check_fqdn(fqdn: str) -> bool:
     try:
         dname = dns.name.from_text(fqdn)
     except EmptyLabel:
         return False
     return True
 
-def get_all_dns(fqdn: str, only_ipv4: bool, only_ipv6: bool, only_first: bool):
+def get_all_dns(fqdn: str, only_ipv4: bool, only_ipv6: bool, only_first: bool) -> list:
     # fqdn must be checked with check_fqdn() before
     dname = dns.name.from_text(fqdn)
 
@@ -27,7 +27,7 @@ def get_all_dns(fqdn: str, only_ipv4: bool, only_ipv6: bool, only_first: bool):
             break
     return r
 
-def get_dns_request(dname: str, rtype: str, quiet=True):
+def get_dns_request(dname: str, rtype: str, quiet=True) -> list:
     a = list()
     try:
         answers = dns.resolver.resolve(dname, rtype)
@@ -42,7 +42,7 @@ def get_dns_request(dname: str, rtype: str, quiet=True):
             a.append(rdata)
     return a
 
-def get_tlsa_record(fqdn: str, port: int):
+def get_tlsa_record(fqdn: str, port: int) -> list:
     rr_str = '_'+str(port)+'._tcp.'+fqdn+'.'
     dname = dns.name.from_text(rr_str)
 

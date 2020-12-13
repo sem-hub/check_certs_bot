@@ -10,12 +10,12 @@ sys.path.append(work_dir)
 
 from cert_to_text import decode_generalized_time
 
-def get_days_before_expired(cert: crypto.X509):
+def get_days_before_expired(cert: crypto.X509) -> int:
     expired_dt = decode_generalized_time(cert.get_notAfter())
     now_aware = datetime.datetime.utcnow().replace(tzinfo=UTC)
     return (expired_dt - now_aware).days
 
-def get_domains_from_cert(cert: crypto.X509):
+def get_domains_from_cert(cert: crypto.X509) -> set:
     domains = set()
     # Look first onto commonName
     domains.add(cert.get_subject().commonName)
@@ -30,7 +30,7 @@ def get_domains_from_cert(cert: crypto.X509):
 
     return domains
 
-def match_domain(fqdn: str, cert: crypto.X509):
+def match_domain(fqdn: str, cert: crypto.X509) -> bool:
     # get domains list from the certificate
     domains = get_domains_from_cert(cert)
     for d in domains:
@@ -43,7 +43,9 @@ def match_domain(fqdn: str, cert: crypto.X509):
                 return True
     return False
 
-def verify_cert(certs_to_check):
+# cert_to_check: list of x509 or one element x509
+# return error or None
+def verify_cert(certs_to_check) -> str:
     error = None
     store = crypto.X509Store()
     if type(certs_to_check) == list:

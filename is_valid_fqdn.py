@@ -1,6 +1,6 @@
 import re
 
-def is_valid_fqdn(fqdn):
+def is_valid_fqdn(fqdn: str) -> bool:
     if len(fqdn) > 255:
         return False
     if fqdn.find('.') == -1:

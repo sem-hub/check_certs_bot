@@ -1,4 +1,4 @@
-def escape_markdown(msg: str):
+def escape_markdown(msg: str) -> str:
     m = str(msg)
     m = m.replace('[', '\\[')
     m = m.replace('_', '\\_')

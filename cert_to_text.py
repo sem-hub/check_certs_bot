@@ -8,10 +8,10 @@ sys.path.append(work_dir)
 
 from escape_markdown import escape_markdown
 
-def decode_generalized_time(gt):
+def decode_generalized_time(gt: bytes) -> str:
     return datetime.datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
 
-def list_of_tuples(indent: str, lt: tuple):
+def list_of_tuples(indent: str, lt: tuple) -> str:
     text = list()
     d = {'C': 'countryName',
          'O': 'organizationName',
@@ -28,7 +28,7 @@ def list_of_tuples(indent: str, lt: tuple):
 
     return '\n'.join(map(str, text))
 
-def x509_alt_names(indent: str, st: str):
+def x509_alt_names(indent: str, st: str) -> str:
     text = list()
     for s in st.split(','):
         s = s.replace(' ', '')
@@ -37,7 +37,7 @@ def x509_alt_names(indent: str, st: str):
 
     return '\n'.join(map(str, text))
 
-def cert_to_text(x509: crypto.X509):
+def cert_to_text(x509: crypto.X509) -> str:
     text = list()
     issued_dt = decode_generalized_time(x509.get_notBefore())
     expired_dt = decode_generalized_time(x509.get_notAfter())

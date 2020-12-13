@@ -19,7 +19,7 @@ from dns_requests import get_dns_request, check_fqdn, get_all_dns, get_tlsa_reco
 from tlsa import check_tlsa
 from ocsp import check_ocsp
 
-def check_cert(fqdn: str, port: int, proto: str, flags):
+def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> bool:
     # For fast using
     debug = flags['debug']
     quiet = flags['quiet']

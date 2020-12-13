@@ -1,7 +1,7 @@
 import datetime
 import socket
 import sys
-from OpenSSL import SSL
+from OpenSSL import SSL, crypto
 
 from os import sys, path
 
@@ -10,7 +10,8 @@ sys.path.append(work_dir)
 
 from verify_cert import verify_cert
 
-def get_chain_from_server(hostname: str, addr: str, port: int, proto: str):
+# return (err, list(x509))
+def get_chain_from_server(hostname: str, addr: str, port: int, proto: str) -> (str, list):
     context = SSL.Context(method=SSL.SSLv23_METHOD)
 
     # open plain connection
@@ -49,7 +50,8 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str):
 
     return (None, chain)
 
-def get_cert_from_server(hostname: str, addr: str, port: int, proto: str):
+# return (err, x509)
+def get_cert_from_server(hostname: str, addr: str, port: int, proto: str) -> (str, crypto.X509):
     (error, chain) = get_chain_from_server(hostname, addr, port, proto)
     if error:
         return (error, None)
