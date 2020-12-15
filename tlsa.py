@@ -1,8 +1,11 @@
 import hashlib
+import logging
 from OpenSSL import crypto
 from os import sys, path
+
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
+
 from dns_requests import get_tlsa_record
 
 def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> str:
@@ -28,7 +31,7 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> bool:
     result = False
     for a in answer:
         if a.usage != 3:
-            #print('Only usage type 3 is supported')
+            logging.error('Only usage type 3 is supported')
             continue
 
         tlsa = generate_tlsa(cert, a.usage, a.selector, a.mtype)

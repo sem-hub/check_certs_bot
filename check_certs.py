@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import logging
 import ssl
 import sys
 from pytz import UTC
@@ -19,24 +20,24 @@ from dns_requests import get_dns_request, check_fqdn, get_all_dns, get_tlsa_reco
 from tlsa import check_tlsa
 from ocsp import check_ocsp
 
-def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> bool:
+def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
+    message = ''
     # For fast using
-    debug = flags['debug']
     quiet = flags['quiet']
 
     if not check_fqdn(fqdn):
-        print('Host name is invalid: %s' % fqdn)
-        return False
+        message = message + 'Host name is invalid: %s\n' % fqdn
+        return message
 
     addresses = list()
 
     if proto == 'smtp':
         if not quiet:
-            print('MX records for %s:' % fqdn)
+            message = message + 'MX records for %s:\n' % fqdn
         for rdata in get_dns_request(fqdn, 'MX', quiet):
             mx_host = rdata.exchange.to_text()[:-1]
             if not quiet:
-                print('  %s' % mx_host)
+                message = message + '  %s\n' % mx_host
             for addr in get_all_dns(rdata.exchange, flags['only_ipv4'],
                     flags['only_ipv6'], flags['only_one']):
                 addresses.append((mx_host,addr))
@@ -47,24 +48,24 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> bool:
             addresses.append((fqdn,addr))
 
     if len(addresses) == 0:
-        print('No address records found for %s' % fqdn)
-        return False
+        message = message + 'No address records found for %s\n' % fqdn
+        return message
     else:
         if not quiet:
-            print('%d DNS address[es] found for %s:' % (len(addresses), fqdn))
+            message = message + '%d DNS address[es] found for %s:\n' % (len(addresses), fqdn)
 
     cert0_id = 0
     for addr in addresses:
         # XXX if not debug
         if not quiet:
-            print('%s: %s' % addr)
+            message = message + '%s: %s\n' % addr
         error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
         if error:
-            print('Error: %s' % error)
+            message = message + 'Error: %s\n' % error
             continue
         # XXX debug only
         if not quiet:
-            print('Got %d certificates in chain' % len(chain))
+            message = message + 'Got %d certificates in chain\n' % len(chain)
         cert = chain[0]
         is_new_cert = not cert0_id
         if is_new_cert:
@@ -73,57 +74,57 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> bool:
         # Do not check the same certificate again
         if not is_new_cert and cert.get_serial_number() == cert0_id:
             if not quiet:
-                print('Certificate is the same')
+                message = message + 'Certificate is the same\n'
         else:
             if cert.get_serial_number() != cert0_id:
-                print('Certificates are differ')
+                message = message + 'Certificates are differ\n'
 
             error = verify_cert(chain)
 
             if flags['print_id']:
-                print('ID: %X' % cert.get_serial_number())
+                message = message + 'ID: %X\n' % cert.get_serial_number()
             if not quiet:
-                print(cert_to_text(cert))
+                message = message + cert_to_text(cert) + '\n'
 
             # If we have bad certificate here, don't check it for matching
             if error:
-                print('Certificate error: %s' % error)
+                message = message + 'Certificate error: %s\n' % error
                 continue
             else:
                 if not match_domain(fqdn, cert):
                     # XXX print domain list from certificate if verbose or debug
-                    print('Certificate error: Host name mismatched with any ' + \
-                            'domain in certificate')
+                    message = message + 'Certificate error: Host name ' + \
+                            'mismatched with any domain in certificate\n'
                     continue
                 else:
                     days_before_expired = get_days_before_expired(cert)
                     if flags['warn_before_expired'] and \
                         days_before_expired <= flags['warn_before_expired']:
-                            print('Certificate fill expired after %d days' %
-                                    days_before_expired)
+                            message = message + 'Certificate fill expired ' + \
+                                'after %d days\n' % days_before_expired
                     else:
                         # ocspcheck can't check only one certificate. It needs a chain
                         if len(chain) > 1:
                             result = check_ocsp(chain)
                             if result != 'GOOD' or not quiet:
-                                print('OCSP check result: *%s*' % result)
+                                message = message + 'OCSP check result: *%s*\n' % result
                             if result != 'GOOD':
                                 continue
                         if not quiet:
-                            print('Certificate is good')
+                            message = message + 'Certificate is good\n'
         # only good certificate here
         # Run TLSA check if we have TLSA record
         if get_tlsa_record(fqdn, port):
             if not check_tlsa(fqdn, port, chain[0]):
-                print('TLSA is not match')
+                message = message + 'TLSA is *not match*\n'
             else:
                 if not quiet:
-                    print('TLSA is OK')
+                    message = message + 'TLSA is *OK*\n'
         else:
             if not quiet:
-                print('No TLSA record found. Check skipped.')
+                message = message + 'No TLSA record found. Check skipped.\n'
 
-    return True
+    return message
 
 # MAIN ()
 if __name__ == '__main__':
@@ -149,7 +150,6 @@ if __name__ == '__main__':
     fqdn = args.fqdn[0]
 
     flags = dict()
-    flags['debug'] = args.debug
     flags['quiet'] = args.quiet
     flags['print_id'] = args.print_id
     flags['warn_before_expired'] = args.warn_before_expired
@@ -157,13 +157,18 @@ if __name__ == '__main__':
     flags['only_ipv6'] = args.only_ipv6
     flags['only_one'] = args.only_one
 
+    if args.debug:
+      logging.basicConfig(level=logging.DEBUG)
+    else:
+      logging.basicConfig(format='%(message)s', level=logging.INFO)
+
     if args.proto != None:
         proto = args.proto
     else:
         proto = 'https'
     if args.port == None:
         if proto == 'plain':
-            print('Port is mandatory for plain protocol')
+            logging.error('Port is mandatory for plain protocol')
             sys.exit(1)
         if proto == 'smtp':
             port = 25
@@ -173,6 +178,6 @@ if __name__ == '__main__':
         port = args.port
 
     if not args.quiet:
-        print('proto=%s fqdn=%s port=%d' % (proto, fqdn, port))
+        logging.info('proto=%s fqdn=%s port=%d' % (proto, fqdn, port))
 
-    check_cert(fqdn, port, proto, flags)
+    print(check_cert(fqdn, port, proto, flags), end='')

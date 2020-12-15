@@ -1,4 +1,5 @@
 import datetime
+import logging
 from pytz import UTC
 from os import sys, path
 from OpenSSL import crypto
@@ -60,8 +61,7 @@ def cert_to_text(x509: crypto.X509) -> str:
                                     x509.get_subject().get_components())))
 
     for i in range(x509.get_extension_count()):
-        # XXX debug
-        #print(x509.get_extension(i).get_short_name())
+        logging.debug(x509.get_extension(i).get_short_name())
         if x509.get_extension(i).get_short_name() == b'subjectAltName':
             text.append('   *subjectAltName*:')
             text.append(escape_markdown(x509_alt_names('      ',

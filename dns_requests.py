@@ -1,4 +1,5 @@
 import dns.resolver
+import logging
 
 def check_fqdn(fqdn: str) -> bool:
     try:
@@ -33,7 +34,7 @@ def get_dns_request(dname: str, rtype: str, quiet=True) -> list:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
         if not quiet:
-            print('No DNS record %s found for %s' % (rtype,dname))
+            logging.warning('No DNS record %s found for %s' % (rtype,dname))
         return []
     except dns.resolver.NoAnswer:
         pass
