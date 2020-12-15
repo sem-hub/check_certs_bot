@@ -1,7 +1,7 @@
 certifi 	# Just for a case. python-telegram-bot use it too
 dnspython>=2.0.0
 ocsp-checker
+pem
+pyOpenSSL
 python-telegram-bot==11.1.0
-pam
 rpyc
-sqlite3
