@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
-import telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import argparse
 import logging
+from os import sys, path
+import queue
 import rpyc
 import subprocess
-import queue
+import telegram
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import threading
 from urllib.parse import urlsplit
-from os import sys, path
 
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
@@ -239,8 +240,14 @@ class CheckCertBot:
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true')
+    args = parser.parse_args()
 
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+    if args.debug:
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+    else:
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
     remote_messages = queue.Queue()
 

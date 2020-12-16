@@ -2,11 +2,11 @@
 
 import argparse
 import logging
+from os import sys, path
 import re
 import rpyc
 import subprocess
 import sys
-from os import sys, path
 
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
@@ -20,7 +20,7 @@ parser.add_argument('--dry-run', action='store_true')
 args = parser.parse_args()
 
 if args.debug:
-  logging.basicConfig(format='%(levelname)s:*** %(message)s', level=logging.DEBUG)
+    logging.basicConfig(format='%(levelname)s:*** %(message)s', level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.INFO)
 
