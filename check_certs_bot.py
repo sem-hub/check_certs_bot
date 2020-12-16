@@ -4,7 +4,6 @@ import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
 import rpyc
-import sqlite3
 import subprocess
 import queue
 import threading
@@ -15,6 +14,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from is_valid_fqdn import is_valid_fqdn
+from db import DB
 
 help_text='''
 A bot for checking HTTP servers certificates.
@@ -146,7 +146,8 @@ class CheckCertBot:
         # Run job every 10 seconds
         queue_job = job_queue.run_repeating(self.check_queue, interval=10, first=10)
 
-        self.db_connect_and_create_table()
+        self.servers_db = DB('servers')
+        self.servers_db.create(create_table_statement)
 
     def check_queue(self, bot, job):
         not_empty = False
@@ -156,13 +157,6 @@ class CheckCertBot:
             bot.send_message(chat_id=chat_id, text=msg)
         if not_empty:
             remote_messages.task_done()
-
-    def db_connect_and_create_table(self):
-        self.con = sqlite3.connect(prog_dir+'/checkcerts.sqlite3',
-                check_same_thread=False)
-        self.cur = self.con.cursor()
-        self.cur.execute(create_table_statement)
-        self.con.commit()
 
     def start(self):
         self.updater.start_polling()
@@ -179,9 +173,9 @@ class CheckCertBot:
 
     def list_cmd(self, bot, update):
         # XXX datetime('Never', 'localtime') == NoneType
-        self.cur.execute("SELECT datetime(when_added, 'localtime'), hostname, proto, port, warn_before_expired, datetime(last_checked, 'localtime'), status FROM servers WHERE chat_id=?", (str(update.message.chat_id),))
+        res = self.servers_db.select('datetime(when_added, "localtime"), hostname, proto, port, warn_before_expired, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
         output = list()
-        for r in self.cur.fetchall():
+        for r in res:
             output.append('|'.join(r))
         if len(output) == 0:
             output = ['Empty']
@@ -196,8 +190,7 @@ class CheckCertBot:
             return
         # XXX Check for duplicates
         # XXX days is not implemented yet
-        self.cur.execute("INSERT INTO servers VALUES (CURRENT_TIMESTAMP, ?, ?, ?, ?, '5', '0000-01-01 00:00:00', 'None', '0')", (fqdn, proto, port, str(update.message.chat_id)))
-        self.con.commit()
+        self.servers_db.insert('', f'CURRENT_TIMESTAMP, "{fqdn}", "{proto}", "{port}", "{str(update.message.chat_id)}", "5", "0000-01-01 00:00:00", "None", "0"')
         bot.send_message(chat_id=update.message.chat_id, text=f'Successfully added: {fqdn}')
 
     def hold_cmd(self, bot, update, args):
@@ -205,8 +198,7 @@ class CheckCertBot:
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
-        self.cur.execute("UPDATE servers SET status='HOLD' WHERE hostname=? and port=? and chat_id=?",(fqdn, port, str(update.message.chat_id)))
-        self.con.commit()
+        self.servers_db.update('status="HOLD"', f'hostname="{fqdn}" and port="{port}" and chat_id="{str(update.message.chat_id)}"')
         bot.send_message(chat_id=update.message.chat_id, text=f'Hold checking for: {fqdn}:{port}')
 
     def unhold_cmd(self, bot, update, args):
@@ -214,22 +206,18 @@ class CheckCertBot:
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
-        self.cur.execute("UPDATE servers SET status='None' WHERE hostname=? and port=? and chat_id=?", (fqdn, port, str(update.message.chat_id)))
-        self.con.commit()
-        bot.send_message(chat_id=update.message.chat_id, text=f'Unhold checking for: {fqdn}:{port}')
+        self.servers_db.update('status="None"', f'hostname="{fqdn}" and port="{port}" and chat_id="{str(update.message.chat_id)}"')
 
     def remove_cmd(self, bot, update, args):
         (error, proto, fqdn, port) = parse_message(' '.join(args))
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
-        self.cur.execute("DELETE FROM servers WHERE hostname=? and port=? and chat_id=?", (fqdn, port, str(update.message.chat_id)))
-        self.con.commit()
+        self.servers_db.delete(f'hostname="{fqdn}" and port="{port}" and chat_id="{str(update.message.chat_id)}"')
         bot.send_message(chat_id=update.message.chat_id, text=f'Successfully removed: {fqdn}:{port}')
 
     def reset_cmd(self, bot, update):
-        self.cur.execute("DELETE FROM servers WHERE chat_id=?", (str(update.message.chat_id),))
-        self.con.commit()
+        self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
         bot.send_message(chat_id=update.message.chat_id, text='Successfully reseted')
 
     def unknown_cmd(self, bot, update):
