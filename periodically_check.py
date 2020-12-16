@@ -29,7 +29,7 @@ con = sqlite3.connect(prog_dir+'/checkcerts.sqlite3')
 cur = con.cursor()
 cur.execute('SELECT * FROM servers')
 for r in cur.fetchall():
-    logging.debug('%s %s %s' % (r[1], r[2], r[3]))
+    logging.debug(f'{r[1]} {r[2]} {r[3]}')
     old_cert_id = r[8]
     if r[7] == 'HOLD':
         logging.debug('Skipped')
@@ -40,7 +40,7 @@ for r in cur.fetchall():
         result = subprocess.check_output(['/usr/bin/python3', prog_dir+'/check_certs.py', '--quiet', '--print-id', '--warn-before-expired', r[5], r[1], r[2], r[3]], stderr=subprocess.STDOUT)
     except:
         result = 'Check command failure'
-        logging.debug('subprocess failure: %s' % sys.exc_info()[0])
+        logging.debug(f'subprocess failure: {sys.exc_info()[1]}')
 
     if args.dry_run:
         continue
@@ -52,7 +52,7 @@ for r in cur.fetchall():
     if m == None:
         rcon = rpyc.connect('localhost', 18861)
         rcon.root.add_message(r[4], '%s %s %s check certificate error:\n%s' % (r[1], r[2], r[3], result))
-        logging.debug('Error: |%s|' % result)
+        logging.debug(f'Error: |{result}|')
         cur.execute('UPDATE servers SET last_checked=CURRENT_TIMESTAMP, status=? WHERE hostname=? AND port=?', (escape_markdown(result), r[1], r[3]))
         con.commit()
         continue
@@ -63,7 +63,7 @@ for r in cur.fetchall():
         con.commit()
         rcon = rpyc.connect('localhost', 18861)
         rcon.root.add_message(r[4], '%s %s %s check certificate error:\n%s' % (r[1], r[2], r[3], result))
-        logging.debug('Error*: %s' % result)
+        logging.debug(f'Error*: {result}')
     else:
         if cert_id == old_cert_id:
             result = 'OK'
@@ -71,6 +71,6 @@ for r in cur.fetchall():
             result = 'Certificate was changed'
         cur.execute('UPDATE servers SET last_checked=CURRENT_TIMESTAMP, status=?, cert_id=?  WHERE hostname=? AND port=?', (result, cert_id, r[1], r[3]))
         con.commit()
-        logging.debug('%s' % result)
+        logging.debug(f'{result}')
 
 con.close()

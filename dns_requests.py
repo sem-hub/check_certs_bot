@@ -34,7 +34,7 @@ def get_dns_request(dname: str, rtype: str, quiet=True) -> list:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
         if not quiet:
-            logging.warning('No DNS record %s found for %s' % (rtype,dname))
+            logging.warning(f'No DNS record {rtype} found for {dname}')
         return []
     except dns.resolver.NoAnswer:
         pass

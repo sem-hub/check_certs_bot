@@ -60,11 +60,11 @@ def check_validity(proto: str, fqdn: str, port: int):
     error = ''
     valid_proto = ('https', 'smtp', 'plain')
     if proto not in valid_proto:
-        error = 'Unknown protocol: %s ' % proto
+        error = f'Unknown protocol: {proto} '
     if not is_valid_fqdn(fqdn):
-        error = error+'Bad server FQDN: %s ' % fqdn
+        error = error + f'Bad server FQDN: {fqdn} '
     if port < 1 or port > 65535:
-        error = error+'Bad port number: %d ' % port
+        error = error + f'Bad port number: {port} '
     return error
 
 def parse_message(message):
@@ -192,40 +192,40 @@ class CheckCertBot:
     def add_cmd(self, bot, update, args):
         (error, proto, fqdn, port) = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text='Parsing error: %s' % error)
+            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
         # XXX Check for duplicates
         # XXX days is not implemented yet
         self.cur.execute("INSERT INTO servers VALUES (CURRENT_TIMESTAMP, ?, ?, ?, ?, '5', '0000-01-01 00:00:00', 'None', '0')", (fqdn, proto, port, str(update.message.chat_id)))
         self.con.commit()
-        bot.send_message(chat_id=update.message.chat_id, text='Successfully added: %s' % fqdn)
+        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully added: {fqdn}')
 
     def hold_cmd(self, bot, update, args):
         (error, proto, fqdn, port) = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text='Parsing error: %s' % error)
+            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
         self.cur.execute("UPDATE servers SET status='HOLD' WHERE hostname=? and port=? and chat_id=?",(fqdn, port, str(update.message.chat_id)))
         self.con.commit()
-        bot.send_message(chat_id=update.message.chat_id, text='Hold checking for: %s:%s' % (fqdn, port))
+        bot.send_message(chat_id=update.message.chat_id, text=f'Hold checking for: {fqdn}:{port}')
 
     def unhold_cmd(self, bot, update, args):
         (error, proto, fqdn, port) = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text='Parsing error: %s' % error)
+            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
         self.cur.execute("UPDATE servers SET status='None' WHERE hostname=? and port=? and chat_id=?", (fqdn, port, str(update.message.chat_id)))
         self.con.commit()
-        bot.send_message(chat_id=update.message.chat_id, text='Unhold checking for: %s:%s' % (fqdn, port))
+        bot.send_message(chat_id=update.message.chat_id, text=f'Unhold checking for: {fqdn}:{port}')
 
     def remove_cmd(self, bot, update, args):
         (error, proto, fqdn, port) = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text='Parsing error: %s' % error)
+            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
         self.cur.execute("DELETE FROM servers WHERE hostname=? and port=? and chat_id=?", (fqdn, port, str(update.message.chat_id)))
         self.con.commit()
-        bot.send_message(chat_id=update.message.chat_id, text='Successfully removed: %s:%s' % (fqdn, port))
+        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully removed: {fqdn}:{port}')
 
     def reset_cmd(self, bot, update):
         self.cur.execute("DELETE FROM servers WHERE chat_id=?", (str(update.message.chat_id),))
@@ -242,7 +242,7 @@ class CheckCertBot:
             return
 
         bot.send_message(chat_id=update.message.chat_id,
-                text='Checking certificate for: %s (%s %s)' % (fqdn, proto, port))
+                text=f'Checking certificate for: {fqdn} ({proto} {port})')
         result = subprocess.check_output([prog_dir+'/check_certs.py', fqdn, proto, port])
         for i in range(0, len(result), 4095):
             bot.send_message(chat_id=update.message.chat_id,

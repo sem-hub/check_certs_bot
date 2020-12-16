@@ -26,18 +26,18 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
     quiet = flags['quiet']
 
     if not check_fqdn(fqdn):
-        message = message + 'Host name is invalid: %s\n' % fqdn
+        message = message + f'Host name is invalid: {fqdn}\n'
         return message
 
     addresses = list()
 
     if proto == 'smtp':
         if not quiet:
-            message = message + 'MX records for %s:\n' % fqdn
+            message = message + f'MX records for {fqdn}:\n'
         for rdata in get_dns_request(fqdn, 'MX', quiet):
             mx_host = rdata.exchange.to_text()[:-1]
             if not quiet:
-                message = message + '  %s\n' % mx_host
+                message = message + f'  {mx_host}\n'
             for addr in get_all_dns(rdata.exchange, flags['only_ipv4'],
                     flags['only_ipv6'], flags['only_one']):
                 addresses.append((mx_host,addr))
@@ -48,24 +48,24 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
             addresses.append((fqdn,addr))
 
     if len(addresses) == 0:
-        message = message + 'No address records found for %s\n' % fqdn
+        message = message + f'No address records found for {fqdn}\n'
         return message
     else:
         if not quiet:
-            message = message + '%d DNS address[es] found for %s:\n' % (len(addresses), fqdn)
+            message = message + f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
 
     cert0_id = 0
     for addr in addresses:
         # XXX if not debug
         if not quiet:
-            message = message + '%s: %s\n' % addr
+            message = message + f'{addr[0]}: {addr[1]}\n'
         error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
         if error:
-            message = message + 'Error: %s\n' % error
+            message = message + f'Error: {error}\n'
             continue
         # XXX debug only
         if not quiet:
-            message = message + 'Got %d certificates in chain\n' % len(chain)
+            message = message + f'Got {len(chain)} certificates in chain\n'
         cert = chain[0]
         is_new_cert = not cert0_id
         if is_new_cert:
@@ -88,7 +88,7 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
 
             # If we have bad certificate here, don't check it for matching
             if error:
-                message = message + 'Certificate error: %s\n' % error
+                message = message + f'Certificate error: {error}\n'
                 continue
             else:
                 if not match_domain(fqdn, cert):
@@ -101,13 +101,13 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
                     if flags['warn_before_expired'] and \
                         days_before_expired <= flags['warn_before_expired']:
                             message = message + 'Certificate fill expired ' + \
-                                'after %d days\n' % days_before_expired
+                                f'after {days_before_expired} days\n'
                     else:
                         # ocspcheck can't check only one certificate. It needs a chain
                         if len(chain) > 1:
                             result = check_ocsp(chain)
                             if result != 'GOOD' or not quiet:
-                                message = message + 'OCSP check result: *%s*\n' % result
+                                message = message + f'OCSP check result: *{result}*\n'
                             if result != 'GOOD':
                                 continue
                         if not quiet:
@@ -178,6 +178,6 @@ if __name__ == '__main__':
         port = args.port
 
     if not args.quiet:
-        logging.info('proto=%s fqdn=%s port=%d' % (proto, fqdn, port))
+        logging.info(f'proto={proto} fqdn={fqdn} port={port}')
 
     print(check_cert(fqdn, port, proto, flags), end='')

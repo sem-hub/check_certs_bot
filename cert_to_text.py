@@ -23,9 +23,9 @@ def list_of_tuples(indent: str, lt: tuple) -> str:
         }
     for (name, val) in lt:
         if name in d.keys():
-            text.append('%s%s: %s' % (indent, d[name].decode('utf8'), val.decode('utf8')))
+            text.append(indent + d[name].decode('utf8') + ': ' + val.decode('utf8'))
         else:
-            text.append('%s%s: %s' % (indent, name.decode('utf8'), val.decode('utf8')))
+            text.append(indent + name.decode('utf8') + ': ' + val.decode('utf8'))
 
     return '\n'.join(map(str, text))
 
@@ -34,7 +34,7 @@ def x509_alt_names(indent: str, st: str) -> str:
     for s in st.split(','):
         s = s.replace(' ', '')
         s = s.replace(':', ': ')
-        text.append('%s%s' % (indent, s))
+        text.append(f'{indent}{s}')
 
     return '\n'.join(map(str, text))
 
