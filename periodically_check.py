@@ -27,15 +27,15 @@ else:
 servers_db = DB('servers')
 res = servers_db.select('*')
 for r in res:
-    logging.debug(f'{r[1]} {r[2]} {r[3]}')
-    old_cert_id = r[8]
-    if r[7] == 'HOLD':
+    logging.debug(f'{r["hostname"]} {r["proto"]} {r["port"]}')
+    old_cert_id = r['cert_id']
+    if r['status'] == 'HOLD':
         logging.debug('Skipped')
         continue
     result = ''
-    logging.debug('Command to run:\n%s %s %s %s %s %s %s %s %s' % ('/usr/bin/python3', work_dir+'/check_certs.py', '--quiet', '--print-id', '--warn-before-expired', r[5], r[1], r[2], r[3]))
+    logging.debug('Command to run:\n%s %s %s %s %s %s %s %s %s' % ('/usr/bin/python3', work_dir+'/check_certs.py', '--quiet', '--print-id', '--warn-before-expired', r['warn_before_expired'], r['hostname'], r['proto'], r['port']))
     try:
-        result = subprocess.check_output(['/usr/bin/python3', work_dir+'/check_certs.py', '--quiet', '--print-id', '--warn-before-expired', r[5], r[1], r[2], r[3]], stderr=subprocess.STDOUT)
+        result = subprocess.check_output(['/usr/bin/python3', work_dir+'/check_certs.py', '--quiet', '--print-id', '--warn-before-expired', r['warn_before_expired'], r['hostname'], r['proto'], r['port']], stderr=subprocess.STDOUT)
     except:
         result = 'Check command failure'
         logging.debug(f'subprocess failure: {sys.exc_info()[1]}')
@@ -49,21 +49,21 @@ for r in res:
     m = re.search('ID: ([0-9A-Z]+)\n?', result)
     if m == None:
         rcon = rpyc.connect('localhost', 18861)
-        rcon.root.add_message(r[4], '%s %s %s check certificate error:\n%s' % (r[1], r[2], r[3], result))
+        rcon.root.add_message(r['chat_id'], f'{r["hostname"]} {r["proto"]} {r["port"]} check certificate error:\n{result}')
         logging.debug(f'Error: |{result}|')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}"', f'hostname="{r[1]}" AND port="{r[3]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}"', f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
         continue
     cert_id = m.group(1)
     result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
     if result != '':
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"', f'hostname="{r[1]}" AND port="{r[3]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"', f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
         rcon = rpyc.connect('localhost', 18861)
-        rcon.root.add_message(r[4], '%s %s %s check certificate error:\n%s' % (r[1], r[2], r[3], result))
+        rcon.root.add_message(r['chat_id'], f'{r["hostname"]} {r["proto"]} {r["port"]} check certificate error:\n{result}')
         logging.debug(f'Error*: {result}')
     else:
         if cert_id == old_cert_id:
             result = 'OK'
         else:
             result = 'Certificate was changed'
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"',  f'hostname="{r[1]}" AND port="{r[3]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
         logging.debug(f'{result}')

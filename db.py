@@ -12,6 +12,7 @@ class DB:
         self.dbname = dbname
         self.con = sqlite3.connect(prog_dir+'/checkcerts.sqlite3',
                 check_same_thread=False)
+        self.con.row_factory = sqlite3.Row
         self.cur = self.con.cursor()
     def __del__(self):
         self.con.close()
