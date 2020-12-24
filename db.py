@@ -10,10 +10,7 @@ db_file = prog_dir+'/checkcerts.sqlite3'
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
-        if row[idx].isdigit() and len(row[idx]) < 5:
-            d[col[0]] = int(row[idx])
-        else:
-            d[col[0]] = row[idx]
+        d[col[0]] = row[idx]
     return d
 
 # XXX Error checking
