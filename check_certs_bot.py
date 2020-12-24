@@ -208,6 +208,7 @@ class CheckCertBot:
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
         self.servers_db.update('status="None"', f'hostname="{fqdn}" and port="{port}" and chat_id="{str(update.message.chat_id)}"')
+        bot.send_message(chat_id=update.message.chat_id, text=f'Unhold checking for: {fqdn}:{port}')
 
     def remove_cmd(self, bot, update, args):
         (error, proto, fqdn, port) = parse_message(' '.join(args))
