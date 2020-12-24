@@ -6,13 +6,22 @@ import sqlite3
 
 prog_dir = path.dirname(path.abspath(__file__))
 
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        if row[idx].isdigit():
+            d[col[0]] = int(row[idx])
+        else:
+            d[col[0]] = row[idx]
+    return d
+
 # XXX Error checking
 class DB:
     def __init__(self, dbname: str):
         self.dbname = dbname
         self.con = sqlite3.connect(prog_dir+'/checkcerts.sqlite3',
                 check_same_thread=False)
-        self.con.row_factory = sqlite3.Row
+        self.con.row_factory = dict_factory
         self.cur = self.con.cursor()
     def __del__(self):
         self.con.close()
