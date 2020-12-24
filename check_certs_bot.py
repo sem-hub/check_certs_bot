@@ -166,7 +166,7 @@ class CheckCertBot:
         res = self.servers_db.select('datetime(when_added, "localtime"), hostname, proto, port, warn_before_expired, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
         output = list()
         for r in res:
-            output.append('|'.join(r))
+            output.append('|'.join([str(elem) for elem in r.values()]))
         if len(output) == 0:
             output = ['Empty']
         else:

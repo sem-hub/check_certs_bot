@@ -1,4 +1,4 @@
-user_create_statement='''CREATE TABLE IF NOT EXISTS users (
+users_create_statement='''CREATE TABLE IF NOT EXISTS users (
 name TEXT,
 chat_id TEXT
 )'''
