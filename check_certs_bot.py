@@ -180,7 +180,7 @@ class CheckCertBot:
             return
         # XXX Check for duplicates
         # XXX days is not implemented yet
-        self.servers_db.insert('', f'CURRENT_TIMESTAMP, "{fqdn}", "{proto}", "{port}", "{str(update.message.chat_id)}", "5", "0000-01-01 00:00:00", "None", "0"')
+        self.servers_db.insert('when_added, hostname, proto, port, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{fqdn}", "{proto}", "{port}", "{str(update.message.chat_id)}", "5", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "None", "0"')
         bot.send_message(chat_id=update.message.chat_id, text=f'Successfully added: {fqdn}')
 
     def hold_cmd(self, bot, update, args):
