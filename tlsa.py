@@ -25,16 +25,21 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> s
         m.update(dump)
         return m.digest()
 
-def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> bool:
+def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> str:
     answer = get_tlsa_record(fqdn, port)
 
+    if len(answer) == 0:
+        return 'not found. Ignored'
     result = False
     for a in answer:
-        if a.usage != 3:
-            logging.error('Only usage type 3 is supported')
+        if a.usage not in [1,3]:
+            logging.error('Only usage type 1 or 3 are supported')
             continue
 
         tlsa = generate_tlsa(cert, a.usage, a.selector, a.mtype)
         result = a.cert == tlsa
 
-    return result
+    if result:
+        return 'OK'
+    else:
+        return 'is not match'

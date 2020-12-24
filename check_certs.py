@@ -16,7 +16,7 @@ from get_cert_from_server import get_chain_from_server
 from verify_cert import verify_cert, match_domain, get_days_before_expired
 from cert_to_text import cert_to_text
 from escape_markdown import escape_markdown
-from dns_requests import get_dns_request, check_fqdn, get_all_dns, get_tlsa_record
+from dns_requests import get_dns_request, check_fqdn, get_all_dns
 from tlsa import check_tlsa
 from ocsp import check_ocsp
 
@@ -114,15 +114,11 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
                             message = message + 'Certificate is good\n'
         # only good certificate here
         # Run TLSA check if we have TLSA record
-        if get_tlsa_record(fqdn, port):
-            if not check_tlsa(fqdn, port, chain[0]):
-                message = message + 'TLSA is *not match*\n'
-            else:
-                if not quiet:
-                    message = message + 'TLSA is *OK*\n'
+        res = check_tlsa(fqdn, port, chain[0])
+        if res == 'OK':
+            message = message + 'TLSA is *OK*\n'
         else:
-            if not quiet:
-                message = message + 'No TLSA record found. Check skipped.\n'
+            message = message + f'TLSA is *{res}*\n'
 
     return message
 
