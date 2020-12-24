@@ -73,13 +73,14 @@ def main():
         if result != '':
             send_to_chat(r['chat_id'], f'{r["hostname"]} {r["proto"]} {r["port"]} check certificate error:\n{result}')
             logging.debug(f'Error*: {result}')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
         else:
             if cert_id == r['cert_id']:
                 result = 'OK'
             else:
                 result = 'Certificate was changed'
             logging.debug(f'{result}')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
 
 if __name__ == '__main__':
     main()

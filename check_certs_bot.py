@@ -16,6 +16,7 @@ sys.path.append(work_dir)
 
 from is_valid_fqdn import is_valid_fqdn
 from db import DB
+import db_schemas
 
 help_text='''
 A bot for checking HTTP servers certificates.
@@ -42,20 +43,6 @@ Allowed protocols: *https*, *smtp* and *plain*.
 For *smtp* default port is 25 and you can specify domain name not FQDN. It will be checked for MX DNS records first.
 *plain* means any protocol over ssl (ssl handshake before any protocol conversation)
 '''
-
-create_table_statement='''CREATE TABLE IF NOT EXISTS servers (
-when_added text,
-hostname text,
-proto text,
-port text,
-chat_id,
-warn_before_expired text,
-last_checked text,
-status text,
-cert_id text
-)'''
-
-prog_dir = path.dirname(path.abspath(__file__))
 
 def check_validity(proto: str, fqdn: str, port: int):
     error = ''
@@ -148,7 +135,9 @@ class CheckCertBot:
         queue_job = job_queue.run_repeating(self.check_queue, interval=10, first=10)
 
         self.servers_db = DB('servers')
-        self.servers_db.create(create_table_statement)
+        self.servers_db.create(db_schemas.servers_create_statement)
+        self.users_db = DB('users')
+        self.users_db.create(db_schemas.users_create_statement)
 
     def check_queue(self, bot, job):
         not_empty = False
@@ -233,7 +222,7 @@ class CheckCertBot:
 
         bot.send_message(chat_id=update.message.chat_id,
                 text=f'Checking certificate for: {fqdn} ({proto} {port})')
-        result = subprocess.check_output([prog_dir+'/check_certs.py', fqdn, proto, port])
+        result = subprocess.check_output([work_dir+'/check_certs.py', fqdn, proto, port])
         for i in range(0, len(result), 4095):
             bot.send_message(chat_id=update.message.chat_id,
                     parse_mode='Markdown', disable_web_page_preview=True,

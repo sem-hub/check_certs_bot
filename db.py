@@ -5,11 +5,12 @@ from os import path
 import sqlite3
 
 prog_dir = path.dirname(path.abspath(__file__))
+db_file = prog_dir+'/checkcerts.sqlite3'
 
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
-        if row[idx].isdigit():
+        if row[idx].isdigit() and len(row[idx]) < 5:
             d[col[0]] = int(row[idx])
         else:
             d[col[0]] = row[idx]
@@ -17,10 +18,9 @@ def dict_factory(cursor, row):
 
 # XXX Error checking
 class DB:
-    def __init__(self, dbname: str):
+    def __init__(self, dbname: str, dbfile: str = db_file):
         self.dbname = dbname
-        self.con = sqlite3.connect(prog_dir+'/checkcerts.sqlite3',
-                check_same_thread=False)
+        self.con = sqlite3.connect(dbfile, check_same_thread=False)
         self.con.row_factory = dict_factory
         self.cur = self.con.cursor()
     def __del__(self):
