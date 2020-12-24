@@ -116,9 +116,14 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
         # Run TLSA check if we have TLSA record
         res = check_tlsa(fqdn, port, chain[0])
         if res == 'OK':
-            message = message + 'TLSA is *OK*\n'
+            if not quiet:
+                message = message + 'TLSA is *OK*\n'
         else:
-            message = message + f'TLSA is *{res}*\n'
+            if res == 'not found':
+                if not quiet:
+                    message = message + f'TLSA is not found. Ignored\n'
+            else:
+                message = message + f'TLSA is *{res}*\n'
 
     return message
 

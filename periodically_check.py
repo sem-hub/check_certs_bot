@@ -71,7 +71,6 @@ def main():
         cert_id = m.group(1)
         result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
         if result != '':
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"', f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
             send_to_chat(r['chat_id'], f'{r["hostname"]} {r["proto"]} {r["port"]} check certificate error:\n{result}')
             logging.debug(f'Error*: {result}')
         else:
@@ -79,8 +78,8 @@ def main():
                 result = 'OK'
             else:
                 result = 'Certificate was changed'
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
             logging.debug(f'{result}')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
 
 if __name__ == '__main__':
     main()

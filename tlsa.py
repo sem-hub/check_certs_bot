@@ -29,7 +29,7 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> str:
     answer = get_tlsa_record(fqdn, port)
 
     if len(answer) == 0:
-        return 'not found. Ignored'
+        return 'not found'
     result = False
     for a in answer:
         if a.usage not in [1,3]:
