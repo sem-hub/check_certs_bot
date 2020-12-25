@@ -11,7 +11,7 @@ sys.path.append(work_dir)
 
 from check_certs import check_cert
 from escape_markdown import escape_markdown
-from db import DB
+from db import DB_factory
 from send_to_chat import send_to_chat
 
 def proc_exec(rt: tuple) -> dict:
@@ -50,7 +50,8 @@ def main():
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
     proc_num = args.proc_num
-    servers_db = DB('servers')
+    db_factory = DB_factory()
+    servers_db = db_factory.get_db('servers')
     res = servers_db.select('*')
     with Pool(processes=proc_num) as pool:
         pres = pool.map(proc_exec, enumerate(res))

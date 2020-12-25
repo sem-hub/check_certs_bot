@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
-import pprint
 from os import sys,path
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
-from db import DB
+from db import DB_factory
 import db_schemas
 
-servers_db = DB('servers')
-new_servers_db = DB('servers', 'new_db.sqlite3')
+db_factory = DB_factory()
+servers_db = db_factory.get_db('servers')
+new_servers_db = db_factory.get_db('servers', 'new_db.sqlite3')
 new_servers_db.create(db_schemas.servers_create_statement)
 res = servers_db.select('*')
 keys = ''

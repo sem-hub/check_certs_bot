@@ -15,7 +15,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from is_valid_fqdn import is_valid_fqdn
-from db import DB
+from db import DB_factory
 import db_schemas
 
 help_text='''
@@ -134,9 +134,10 @@ class CheckCertBot:
         # Run job every 10 seconds
         queue_job = job_queue.run_repeating(self.check_queue, interval=10, first=10)
 
-        self.servers_db = DB('servers')
+        self.db_factory = DB_factory()
+        self.servers_db = db_factory.get_db('servers')
         self.servers_db.create(db_schemas.servers_create_statement)
-        self.users_db = DB('users')
+        self.users_db = db_factory.get_db('users')
         self.users_db.create(db_schemas.users_create_statement)
 
     def check_queue(self, bot, job):

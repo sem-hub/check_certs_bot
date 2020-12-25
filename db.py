@@ -13,11 +13,19 @@ def dict_factory(cursor, row):
         d[col[0]] = row[idx]
     return d
 
+class DB_factory:
+    def __init__(self):
+        self.db = dict()
+    def get_db(self, table: str, dbname: str = db_file):
+        if dbname not in self.db:
+            self.db[dbname] = DB(table, dbname)
+        return self.db[dbname]
+
 # XXX Error checking
 class DB:
-    def __init__(self, dbname: str, dbfile: str = db_file):
-        self.dbname = dbname
-        self.con = sqlite3.connect(dbfile, check_same_thread=False)
+    def __init__(self, table: str, dbname):
+        self.table = table
+        self.con = sqlite3.connect(dbname, check_same_thread=False)
         self.con.row_factory = dict_factory
         self.cur = self.con.cursor()
     def __del__(self):
@@ -26,19 +34,19 @@ class DB:
         self.cur.execute(statement)
         self.con.commit()
     def select(self, what: str, where: str = 'true') -> list:
-        logging.debug(f'SELECT {what} FROM {self.dbname} WHERE {where}')
-        self.cur.execute(f'SELECT {what} FROM {self.dbname} WHERE {where}')
+        logging.debug(f'SELECT {what} FROM {self.table} WHERE {where}')
+        self.cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
         result = list()
         return self.cur.fetchall()
     def insert(self, fields: str, values: str):
         if fields == None or fields == '':
-            self.cur.execute(f'INSERT INTO {self.dbname} VALUES ({values})')
+            self.cur.execute(f'INSERT INTO {self.table} VALUES ({values})')
         else:
-            self.cur.execute(f'INSERT INTO {self.dbname} ({fields}) VALUES ({values})')
+            self.cur.execute(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
         self.con.commit()
     def update(self, what: str, where: str):
-        self.cur.execute(f'UPDATE {self.dbname} SET {what} WHERE {where}')
+        self.cur.execute(f'UPDATE {self.table} SET {what} WHERE {where}')
         self.con.commit()
     def delete(self, where: str):
-        self.cur.execute(f'DELETE FROM {self.dbname} WHERE {where}')
+        self.cur.execute(f'DELETE FROM {self.table} WHERE {where}')
         self.con.commit()
