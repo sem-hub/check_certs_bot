@@ -135,9 +135,9 @@ class CheckCertBot:
         queue_job = job_queue.run_repeating(self.check_queue, interval=10, first=10)
 
         self.db_factory = DB_factory()
-        self.servers_db = db_factory.get_db('servers')
+        self.servers_db = self.db_factory.get_db('servers')
         self.servers_db.create(db_schemas.servers_create_statement)
-        self.users_db = db_factory.get_db('users')
+        self.users_db = self.db_factory.get_db('users')
         self.users_db.create(db_schemas.users_create_statement)
 
     def check_queue(self, bot, job):
