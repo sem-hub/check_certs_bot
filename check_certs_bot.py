@@ -27,7 +27,7 @@ Default protocol and port is https(443)
 
 or a command:
 /help   - show this help message.
-/list   - list server names for periodically checking.
+/list   - list server names for periodic checking.
 /add \\[_protocol_://]_hostname_\\[:_port_] \\[_days_]   - add a server to periodical checking. _days_ - warn if days till certificate expire will happen.
 /hold \\[_protocol_://]_hostname_\\[_:port_]  - temporary stop checking this entry
 /unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry
