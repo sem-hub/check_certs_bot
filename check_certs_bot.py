@@ -226,6 +226,7 @@ class CheckCertBot:
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=error)
             return
+        self.user_activity(url, update.message)
 
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1,
                 text=f'Checking certificate for: {url}')
