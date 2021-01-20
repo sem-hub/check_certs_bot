@@ -100,7 +100,7 @@ class CheckCertBot:
     def user_activity(self, cmd, message):
         res = self.users_db.select('*', f'id={message.chat_id}')
         if len(res) == 0:
-            self.users_db.insert('id, name, full_name, first_met, last_activity', f'"{message.chat_id}", "{message.chat.username}", "{message.chat.first_name} {message.chat.last_name}", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
+            self.users_db.insert('id, name, full_name, language_code, first_met, last_activity', f'"{message.chat_id}", "{message.chat.username}", "{message.chat.first_name} {message.chat.last_name}", "{message.from_user.language_code}", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
         else:
             self.users_db.update('last_activity=CURRENT_TIMESTAMP', f'id="{message.chat_id}"')
         self.activity_db.insert('user_id, cmd, date', f'"{message.chat_id}", "{cmd}", CURRENT_TIMESTAMP')
