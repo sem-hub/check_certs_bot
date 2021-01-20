@@ -65,14 +65,14 @@ def main():
         if m == None:
             send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
             logging.debug(f'Error: |{result}|')
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}"', f'url="{r["url"]}"')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}"', f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
             continue
         cert_id = m.group(1)
         result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
         if result != '':
             send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
             logging.debug(f'Error*: {result}')
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}"')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
         else:
             # It;s a first check or certificate did not changed
             if r['cert_id'] == '0' or cert_id == r['cert_id']:
@@ -81,7 +81,7 @@ def main():
                 result = 'Certificate was changed'
                 send_to_chat(r['chat_id'], f'{r["url"]} check certificate:\n{result}')
             logging.debug(f'{result}')
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}"')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
 
 if __name__ == '__main__':
     main()
