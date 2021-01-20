@@ -74,7 +74,8 @@ def main():
             logging.debug(f'Error*: {result}')
             servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}"')
         else:
-            if cert_id == r['cert_id']:
+            # It;s a first check or certificate did not changed
+            if r['cert_id'] == '0' or cert_id == r['cert_id']:
                 result = 'OK'
             else:
                 result = 'Certificate was changed'
