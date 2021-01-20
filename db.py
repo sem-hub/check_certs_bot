@@ -10,7 +10,10 @@ db_file = prog_dir+'/checkcerts.sqlite3'
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
+        if type(row[idx]) is str and row[idx].startswith('0000-'):
+            d[col[0]] = 'Never'
+        else:
+            d[col[0]] = row[idx]
     return d
 
 class DB_factory:
@@ -36,7 +39,6 @@ class DB:
     def select(self, what: str, where: str = 'true') -> list:
         logging.debug(f'SELECT {what} FROM {self.table} WHERE {where}')
         self.cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
-        result = list()
         return self.cur.fetchall()
     def insert(self, fields: str, values: str):
         if fields == None or fields == '':
