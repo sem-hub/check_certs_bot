@@ -78,6 +78,7 @@ def main():
                 result = 'OK'
             else:
                 result = 'Certificate was changed'
+                send_to_chat(r['chat_id'], f'{r["url"]} check certificate:\n{result}')
             logging.debug(f'{result}')
             servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}"')
 
