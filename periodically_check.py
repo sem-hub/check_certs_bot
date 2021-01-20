@@ -16,7 +16,7 @@ from send_to_chat import send_to_chat
 
 def proc_exec(rt: tuple) -> dict:
     r = rt[1]
-    logging.debug(f'{r["hostname"]} {r["proto"]} {r["port"]}')
+    logging.debug(f'{r["url"]}')
     if r['status'] == 'HOLD':
         logging.debug('Skipped')
         return dict()
@@ -30,9 +30,7 @@ def proc_exec(rt: tuple) -> dict:
 
     res = dict()
     res['cert_id'] = r['cert_id']
-    res['hostname'] = r['hostname']
-    res['proto'] = r['proto']
-    res['port'] = r['port']
+    res['url'] = r['url']
     res['chat_id'] = r['chat_id']
     res['out_text'] = check_cert(r['url'], flags)
     return res
@@ -65,23 +63,23 @@ def main():
             result = result[:len(result)-1]
         m = re.search('ID: ([0-9A-Z]+)\n?', result)
         if m == None:
-            send_to_chat(r['chat_id'], f'{r["hostname"]} {r["proto"]} {r["port"]} check certificate error:\n{result}')
+            send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
             logging.debug(f'Error: |{result}|')
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}"', f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}"', f'url="{r["url"]}"')
             continue
         cert_id = m.group(1)
         result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
         if result != '':
-            send_to_chat(r['chat_id'], f'{r["hostname"]} {r["proto"]} {r["port"]} check certificate error:\n{result}')
+            send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
             logging.debug(f'Error*: {result}')
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}"')
         else:
             if cert_id == r['cert_id']:
                 result = 'OK'
             else:
                 result = 'Certificate was changed'
             logging.debug(f'{result}')
-            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'hostname="{r["hostname"]}" AND port="{r["port"]}"')
+            servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}"')
 
 if __name__ == '__main__':
     main()
