@@ -116,19 +116,19 @@ class CheckCertBot:
         self.updater.idle()
 
     def help_cmd(self, bot, update):
-        self.user_activity('help', update.message)
+        self.user_activity('/help', update.message)
         # Remove ReplyKeyboard if it was there
         #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
         #old_message = bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
         bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text=help_text)
 
     def id_cmd(self, bot, update):
-        self.user_activity('id', update.message)
+        self.user_activity('/id', update.message)
         text = f'{update.message.chat_id}: {update.message.chat.username} {update.message.chat.first_name} {update.message.chat.last_name} {update.message.from_user.language_code}'
         bot.send_message(chat_id=update.message.chat_id, text=text)
 
     def list_cmd(self, bot, update, args):
-        self.user_activity('list', update.message)
+        self.user_activity('/list {args}', update.message)
         res = list()
         short = False
         if len(args) > 0 and args[0] == 'short':
@@ -151,7 +151,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', disable_web_page_preview=1, text='\n'.join(output))
 
     def add_cmd(self, bot, update, args):
-        self.user_activity('add', update.message)
+        self.user_activity('/add {args}', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /add URL [days]')
             return
@@ -177,7 +177,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully added: {url}')
 
     def hold_cmd(self, bot, update, args):
-        self.user_activity('hold', update.message)
+        self.user_activity('/hold {args}', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /hold URL')
             return
@@ -189,7 +189,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Hold checking for: {url}')
 
     def unhold_cmd(self, bot, update, args):
-        self.user_activity('unhold', update.message)
+        self.user_activity('/unhold {args}', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /unhold URL')
             return
@@ -201,7 +201,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Unhold checking for: {url}')
 
     def remove_cmd(self, bot, update, args):
-        self.user_activity('remove', update.message)
+        self.user_activity(f'/remove {args}', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /remove URL')
             return
@@ -213,7 +213,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully removed: {url}')
 
     def reset_cmd(self, bot, update):
-        self.user_activity('reset', update.message)
+        self.user_activity('/reset', update.message)
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
         bot.send_message(chat_id=update.message.chat_id, text='Successfully reseted')
 
@@ -222,11 +222,11 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, text='Unknown command. Try /help.')
 
     def message(self, bot, update):
+        self.user_activity(update.message.text, update.message)
         error, url = parse_url(update.message.text)
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=error)
             return
-        self.user_activity(url, update.message)
 
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1,
                 text=f'Checking certificate for: {url}')
