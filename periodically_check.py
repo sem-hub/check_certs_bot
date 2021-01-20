@@ -34,7 +34,7 @@ def proc_exec(rt: tuple) -> dict:
     res['proto'] = r['proto']
     res['port'] = r['port']
     res['chat_id'] = r['chat_id']
-    res['out_text'] = check_cert(r['hostname'], r['port'], r['proto'], flags)
+    res['out_text'] = check_cert(r['url'], flags)
     return res
 
 def main():

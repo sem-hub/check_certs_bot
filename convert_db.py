@@ -14,13 +14,32 @@ new_servers_db.create(db_schemas.servers_create_statement)
 res = servers_db.select('*')
 keys = ''
 values = ''
+tmp = ''
 for r in res:
     for k in r.keys():
-        keys = keys + k + ', '
-        if type(r[k]) is str:
-            values = values + '"' + r[k] + '", '
+        tmpk = k
+        tmpval = r[k]
+        if tmpval == None:
+            tmpval = '0000-00-00 00:00:00'
+        if k == 'hostname':
+            tmp = r[k]
+            continue
+        if k == 'proto':
+            if r[k] == 'plain':
+                tmp = 'imaps://' + tmp
+            else:
+                tmp = r[k] + '://' + tmp
+            continue
+        if k == 'port':
+            tmp = tmp + ':' + str(r[k])
+            tmpk = 'url'
+            tmpval = tmp
+
+        keys = keys + tmpk + ', '
+        if type(tmpval) is str:
+            values = values + '"' + tmpval + '", '
         else:
-            values = values + str(r[k]) + ', '
+            values = values + str(tmpval) + ', '
 
     keys = keys.rsplit(", ",1)[0]
     values = values.rsplit(", ",1)[0]

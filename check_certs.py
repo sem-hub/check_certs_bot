@@ -3,15 +3,14 @@
 import argparse
 import datetime
 import logging
-import ssl
-import sys
-from pytz import UTC
-
 from os import sys, path
+from pytz import UTC
+import ssl
 
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
+from check_validity import parse_and_check_url
 from get_cert_from_server import get_chain_from_server
 from verify_cert import verify_cert, match_domain, get_days_before_expired
 from cert_to_text import cert_to_text
@@ -20,18 +19,24 @@ from dns_requests import get_dns_request, check_fqdn, get_all_dns
 from tlsa import check_tlsa
 from ocsp import check_ocsp
 
-def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
-    message = ''
+MAIL_PROTO = ['smtp', 'smtps', 'submission']
+
+def check_cert(url_str: str, flags: dict) -> str:
     # For fast using
     quiet = flags['quiet']
 
+    err, scheme, fqdn, port = parse_and_check_url(url_str)
+    if err != '':
+        return err
     if not check_fqdn(fqdn):
-        message = message + f'Host name is invalid: {fqdn}\n'
-        return message
+        return f'Host name is invalid: {fqdn}\n'
+
+    logging.debug(f'{scheme} {fqdn} {port}')
 
     addresses = list()
+    message = ''
 
-    if proto == 'smtp':
+    if scheme in MAIL_PROTO:
         if not quiet:
             message = message + f'MX records for {fqdn}:\n'
         for rdata in get_dns_request(fqdn, 'MX', quiet):
@@ -41,6 +46,11 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
             for addr in get_all_dns(rdata.exchange, flags['only_ipv4'],
                     flags['only_ipv6'], flags['only_one']):
                 addresses.append((mx_host,addr))
+
+    # Only smtp protocol needs extra EHLO/STARTTLS commands
+    starttls = False
+    if scheme == 'smtp':
+        starttls = True
 
     # if we don't have addresses from MX records
     if len(addresses) == 0:
@@ -59,7 +69,7 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
         # XXX if not debug
         if not quiet:
             message = message + f'{addr[0]}: {addr[1]}\n'
-        error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
+        error, chain = get_chain_from_server(addr[0], addr[1], port, starttls)
         if error:
             message = message + f'Error: {error}\n'
             continue
@@ -130,9 +140,7 @@ def check_cert(fqdn: str, port: int, proto: str, flags: dict) -> str:
 # MAIN ()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('fqdn', nargs=1)
-    parser.add_argument('proto', nargs='?')
-    parser.add_argument('port', nargs='?', type=int)
+    parser.add_argument('url', nargs=1)
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Print much info for debugging')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -148,7 +156,7 @@ if __name__ == '__main__':
     parser.add_argument('-1', '--only-one', action='store_true',
                         help='Use only first IP for checking')
     args = parser.parse_args()
-    fqdn = args.fqdn[0]
+    url = args.url[0]
 
     flags = dict()
     flags['quiet'] = args.quiet
@@ -163,22 +171,10 @@ if __name__ == '__main__':
     else:
       logging.basicConfig(format='%(message)s', level=logging.INFO)
 
-    if args.proto != None:
-        proto = args.proto
-    else:
-        proto = 'https'
-    if args.port == None:
-        if proto == 'plain':
-            logging.error('Port is mandatory for plain protocol')
-            sys.exit(1)
-        if proto == 'smtp':
-            port = 25
-        else:
-            port = 443
-    else:
-        port = args.port
+    if '://' not in url:
+        url = 'https://' + url
 
     if not args.quiet:
-        logging.info(f'proto={proto} fqdn={fqdn} port={port}')
+        logging.info(f'url={url}')
 
-    print(check_cert(fqdn, port, proto, flags), end='')
+    print(check_cert(url, flags), end='')

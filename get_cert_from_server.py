@@ -11,7 +11,7 @@ sys.path.append(work_dir)
 from verify_cert import verify_cert
 
 # return (err, list(x509))
-def get_chain_from_server(hostname: str, addr: str, port: int, proto: str) -> (str, list):
+def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, list):
     context = SSL.Context(method=SSL.SSLv23_METHOD)
 
     # open plain connection
@@ -28,7 +28,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str) -> (s
     except Exception as msg:
         return (f'{addr}: Connection error: {str(msg)}', None)
 
-    if proto == 'smtp':
+    if starttls:
         # Send EHLO, STARTTLS. Ignore server answer (XXX).
         s.recv(1000)
         s.send(b'EHLO gmail.com\n')
@@ -51,8 +51,8 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str) -> (s
     return (None, chain)
 
 # return (err, x509)
-def get_cert_from_server(hostname: str, addr: str, port: int, proto: str) -> (str, crypto.X509):
-    (error, chain) = get_chain_from_server(hostname, addr, port, proto)
+def get_cert_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, crypto.X509):
+    (error, chain) = get_chain_from_server(hostname, addr, port, starttls)
     if error:
         return (error, None)
     return (None, chain[0])

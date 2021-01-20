@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
-from is_valid_fqdn import is_valid_fqdn
+from check_validity import parse_and_check_url
 from db import DB_factory
 import db_schemas
 
@@ -22,75 +22,32 @@ help_text='''
 A bot for checking HTTP servers certificates.
 
 Enter:
-_URL_
-or
-_hostname_ \\[_proto_] \\[_port_]
+    \\[_protocol_://]_hostname_\\[:_port_]
+Default protocol and port is https(443)
 
 or a command:
 /help   - show this help message.
 /list   - list server names for periodically checking.
-/add _proto://hostname:port_
-or
-/add _hostname_ \\[_protocol_] \\[_port_] \\[_days_]   - add a server to periodical checking. _days_ - warn if days till certificate expire will happen.
-/hold _hostname_  \\[_port_]  - temporary stop checking this entry
-/unhold _hostname_ \\[_port_]  - continue checking this entry
-/remove _proto://hostname:port_
-or
-/remove _hostname_ \\[_port_] - remove a server from periodical checking list.
+/add \\[_protocol_://]_hostname_\\[:_port_] \\[_days_]   - add a server to periodical checking. _days_ - warn if days till certificate expire will happen.
+/hold \\[_protocol_://]_hostname_\\[_:port_]  - temporary stop checking this entry
+/unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry
+/remove \\[_protocol_://]hostname\\[:_port_] - remove a server from periodical checking list.
 /reset  - reset all periodical checking list.
 
-Allowed protocols: *https*, *smtp* and *plain*.
-For *smtp* default port is 25 and you can specify domain name not FQDN. It will be checked for MX DNS records first.
-*plain* means any protocol over ssl (ssl handshake before any protocol conversation)
+Allowed protocols from /etc/services
+For *smtp*, *smtps* and *submission* protocols you can specify domain name not FQDN. It will be checked for MX DNS records first.
+For *smtp* protocol EHLO/STARTTLS commands will be send first to start TLS/SSL session.
 '''
-
-def check_validity(proto: str, fqdn: str, port: int):
-    error = ''
-    valid_proto = ('https', 'smtp', 'plain')
-    if proto not in valid_proto:
-        error = f'Unknown protocol: {proto} '
-    if not is_valid_fqdn(fqdn):
-        error = error + f'Bad server FQDN: {fqdn} '
-    if port < 1 or port > 65535:
-        error = error + f'Bad port number: {port} '
-    return error
 
 def parse_message(message):
     msg = message.strip().lower().encode('ASCII', 'replace').decode('utf-8')
-    # defaults
-    proto = 'https'
-    fqdn = ''
-    port = 443
-    error = ''
-    if msg.find('://') > -1:
-        try:
-            nt = urlsplit(msg)
-            proto = nt.scheme
-            fqdn = nt.hostname
-            if nt.port:
-                port = nt.port
-        except ValueError as err:
-            error = str(err)
-    else:
-        n=msg.find(' ')
-        if n == -1:
-            fqdn = msg
-        else:
-            (fqdn, proto) = msg.split(' ', 1)
-            n = proto.find(' ')
-            if n > -1:
-                (proto, portStr) = proto.split(' ', 1)
-                try:
-                    port = int(portStr)
-                except ValueError as err:
-                    error = str(err)
-            else:
-                if proto == 'smtp':
-                    port = 25
-    if not error:
-        error = check_validity(proto, fqdn, port)
 
-    return (error, proto, fqdn, str(port))
+    # XXX Use only first argument, ignore others
+    url = msg.split()[0]
+    if '://' not in url:
+        url = 'https://' + url
+    err, scheme, hostname, port = parse_and_check_url(url)
+    return (err, f'{scheme}://{hostname}:{port}')
 
 class RPyCService(rpyc.Service):
     def exposed_add_message(self, chat_id, msg):
@@ -164,49 +121,49 @@ class CheckCertBot:
 
     def list_cmd(self, bot, update):
         # XXX datetime('Never', 'localtime') == NoneType
-        res = self.servers_db.select('datetime(when_added, "localtime"), hostname, proto, port, warn_before_expired, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
+        res = self.servers_db.select('datetime(when_added, "localtime"), url, warn_before_expired, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
         output = list()
         for r in res:
             output.append('|'.join([str(elem) for elem in r.values()]))
         if len(output) == 0:
             output = ['Empty']
         else:
-            output.insert(0, '*When added|hostname|proto|port|days to warn before expire|last check date|last check status*')
-        bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text='\n'.join(output))
+            output.insert(0, '*When added|url|days to warn before expire|last check date|last check status*')
+        bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', disable_web_page_preview=1, text='\n'.join(output))
 
     def add_cmd(self, bot, update, args):
-        (error, proto, fqdn, port) = parse_message(' '.join(args))
+        error, url = parse_message(' '.join(args))
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
         # XXX Check for duplicates
         # XXX days is not implemented yet
-        self.servers_db.insert('when_added, hostname, proto, port, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{fqdn}", "{proto}", "{port}", "{str(update.message.chat_id)}", "5", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "None", "0"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully added: {fqdn}')
+        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "5", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0"')
+        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully added: {url}')
 
     def hold_cmd(self, bot, update, args):
-        (error, proto, fqdn, port) = parse_message(' '.join(args))
+        error, url = parse_message(' '.join(args))
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
-        self.servers_db.update('status="HOLD"', f'hostname="{fqdn}" and port="{port}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Hold checking for: {fqdn}:{port}')
+        self.servers_db.update('status="HOLD"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
+        bot.send_message(chat_id=update.message.chat_id, text=f'Hold checking for: {url}')
 
     def unhold_cmd(self, bot, update, args):
-        (error, proto, fqdn, port) = parse_message(' '.join(args))
+        (error, url) = parse_message(' '.join(args))
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
-        self.servers_db.update('status="None"', f'hostname="{fqdn}" and port="{port}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Unhold checking for: {fqdn}:{port}')
+        self.servers_db.update('status="None"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
+        bot.send_message(chat_id=update.message.chat_id, text=f'Unhold checking for: {url}')
 
     def remove_cmd(self, bot, update, args):
-        (error, proto, fqdn, port) = parse_message(' '.join(args))
+        error, url = parse_message(' '.join(args))
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
             return
-        self.servers_db.delete(f'hostname="{fqdn}" and port="{port}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully removed: {fqdn}:{port}')
+        self.servers_db.delete(f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
+        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully removed: {url}')
 
     def reset_cmd(self, bot, update):
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
@@ -216,14 +173,14 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, text='Unknown command. Try /help.')
 
     def message(self, bot, update):
-        (error, proto, fqdn, port) = parse_message(update.message.text)
+        error, url = parse_message(update.message.text)
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=True, text=error)
             return
 
         bot.send_message(chat_id=update.message.chat_id,
-                text=f'Checking certificate for: {fqdn} ({proto} {port})')
-        result = subprocess.check_output([work_dir+'/check_certs.py', fqdn, proto, port])
+                text=f'Checking certificate for: {url}')
+        result = subprocess.check_output([work_dir+'/check_certs.py', url])
         for i in range(0, len(result), 4095):
             bot.send_message(chat_id=update.message.chat_id,
                     parse_mode='Markdown', disable_web_page_preview=True,
