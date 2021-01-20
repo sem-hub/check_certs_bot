@@ -64,8 +64,8 @@ class CheckCertBot:
         dispatcher.add_handler(start_cmd_handler)
         start_cmd_handler = CommandHandler('help', self.help_cmd)
         dispatcher.add_handler(start_cmd_handler)
-        client_id_cmd_handler = CommandHandler('client_id', self.client_id_cmd)
-        dispatcher.add_handler(client_id_cmd_handler)
+        id_cmd_handler = CommandHandler('id', self.id_cmd)
+        dispatcher.add_handler(id_cmd_handler)
         list_cmd_handler = CommandHandler('list', self.list_cmd, pass_args=True)
         dispatcher.add_handler(list_cmd_handler)
         add_cmd_handler = CommandHandler('add', self.add_cmd, pass_args=True)
@@ -94,6 +94,16 @@ class CheckCertBot:
         self.servers_db.create(db_schemas.servers_create_statement)
         self.users_db = self.db_factory.get_db('users')
         self.users_db.create(db_schemas.users_create_statement)
+        self.activity_db = self.db_factory.get_db('activity')
+        self.activity_db.create(db_schemas.activity_create_statement)
+
+    def user_activity(self, cmd, message):
+        res = self.users_db.select('*', f'id={message.chat_id}')
+        if len(res) == 0:
+            self.users_db.insert('id, name, full_name, first_met, last_activity', f'"{message.chat_id}", "{message.chat.username}", "{message.chat.first_name} {message.chat.last_name}", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
+        else:
+            self.users_db.update('last_activity=CURRENT_TIMESTAMP', f'id="{message.chat_id}"')
+        self.activity_db.insert('user_id, cmd, date', f'"{message.chat_id}", "{cmd}", CURRENT_TIMESTAMP')
 
     def check_queue(self, bot, job):
         while not remote_messages.empty():
@@ -106,15 +116,19 @@ class CheckCertBot:
         self.updater.idle()
 
     def help_cmd(self, bot, update):
+        self.user_activity('help', update.message)
         # Remove ReplyKeyboard if it was there
         #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
         #old_message = bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
         bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text=help_text)
 
-    def client_id_cmd(self, bot, update):
-        bot.send_message(chat_id=update.message.chat_id, text=update.message.chat_id)
+    def id_cmd(self, bot, update):
+        self.user_activity('id', update.message)
+        text = f'{update.message.chat_id}: {update.message.chat.username} {update.message.chat.first_name} {update.message.chat.last_name} {update.message.from_user.language_code}'
+        bot.send_message(chat_id=update.message.chat_id, text=text)
 
     def list_cmd(self, bot, update, args):
+        self.user_activity('list', update.message)
         res = list()
         short = False
         if len(args) > 0 and args[0] == 'short':
@@ -137,6 +151,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', disable_web_page_preview=1, text='\n'.join(output))
 
     def add_cmd(self, bot, update, args):
+        self.user_activity('add', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /add URL [days]')
             return
@@ -162,6 +177,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully added: {url}')
 
     def hold_cmd(self, bot, update, args):
+        self.user_activity('hold', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /hold URL')
             return
@@ -173,6 +189,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Hold checking for: {url}')
 
     def unhold_cmd(self, bot, update, args):
+        self.user_activity('unhold', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /unhold URL')
             return
@@ -184,6 +201,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Unhold checking for: {url}')
 
     def remove_cmd(self, bot, update, args):
+        self.user_activity('remove', update.message)
         if len(args) < 1:
             bot.send_message(chat_id=update.message.chat_id, text='Use /remove URL')
             return
@@ -195,10 +213,12 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully removed: {url}')
 
     def reset_cmd(self, bot, update):
+        self.user_activity('reset', update.message)
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
         bot.send_message(chat_id=update.message.chat_id, text='Successfully reseted')
 
     def unknown_cmd(self, bot, update):
+        self.user_activity('unknown', update.message)
         bot.send_message(chat_id=update.message.chat_id, text='Unknown command. Try /help.')
 
     def message(self, bot, update):

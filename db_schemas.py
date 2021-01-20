@@ -2,6 +2,7 @@ users_create_statement='''CREATE TABLE IF NOT EXISTS users (
 id TEXT PRIMARY KEY,
 name TEXT,
 full_name TEXT,
+language_code TEXT,
 first_met TEXT,
 last_activity TEXT
 )'''
@@ -10,7 +11,7 @@ activity_create_statement='''CREATE TABLE IF NOT EXISTS activity (
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 user_id TEXT,
 cmd TEXT,
-when TEXT
+date TEXT
 )'''
 
 servers_create_statement='''CREATE TABLE IF NOT EXISTS servers (
