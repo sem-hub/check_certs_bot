@@ -102,7 +102,7 @@ class CheckCertBot:
         while not remote_messages.empty():
             not_empty = True
             chat_id, msg = remote_messages.get()
-            bot.send_message(chat_id=chat_id, text=msg)
+            bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=msg)
         if not_empty:
             remote_messages.task_done()
 
@@ -112,8 +112,8 @@ class CheckCertBot:
 
     def help_cmd(self, bot, update):
         # Remove ReplyKeyboard if it was there
-        reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
-        old_message = bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
+        #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
+        #old_message = bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
         bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text=help_text)
 
     def client_id_cmd(self, bot, update):
@@ -134,36 +134,36 @@ class CheckCertBot:
     def add_cmd(self, bot, update, args):
         error, url = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
+            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         # XXX Check for duplicates
         # XXX days is not implemented yet
         self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "5", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully added: {url}')
+        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully added: {url}')
 
     def hold_cmd(self, bot, update, args):
         error, url = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
+            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         self.servers_db.update('status="HOLD"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Hold checking for: {url}')
+        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Hold checking for: {url}')
 
     def unhold_cmd(self, bot, update, args):
         (error, url) = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
+            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         self.servers_db.update('status="None"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Unhold checking for: {url}')
+        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Unhold checking for: {url}')
 
     def remove_cmd(self, bot, update, args):
         error, url = parse_message(' '.join(args))
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, text=f'Parsing error: {error}')
+            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         self.servers_db.delete(f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, text=f'Successfully removed: {url}')
+        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully removed: {url}')
 
     def reset_cmd(self, bot, update):
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
@@ -175,15 +175,15 @@ class CheckCertBot:
     def message(self, bot, update):
         error, url = parse_message(update.message.text)
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=True, text=error)
+            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=error)
             return
 
-        bot.send_message(chat_id=update.message.chat_id,
+        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1,
                 text=f'Checking certificate for: {url}')
         result = subprocess.check_output([work_dir+'/check_certs.py', url])
         for i in range(0, len(result), 4095):
             bot.send_message(chat_id=update.message.chat_id,
-                    parse_mode='Markdown', disable_web_page_preview=True,
+                    parse_mode='Markdown', disable_web_page_preview=1,
                     text=result[i:i+4094].decode('utf8'))
 
 if __name__ == '__main__':
