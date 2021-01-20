@@ -174,7 +174,6 @@ if __name__ == '__main__':
     if '://' not in url:
         url = 'https://' + url
 
-    if not args.quiet:
-        logging.info(f'url={url}')
+    logging.debug(f'url={url}')
 
     print(check_cert(url, flags), end='')
