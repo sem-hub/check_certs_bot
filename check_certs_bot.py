@@ -39,11 +39,9 @@ For *smtp*, *smtps* and *submission* protocols you can specify domain name not F
 For *smtp* protocol EHLO/STARTTLS commands will be send first to start TLS/SSL session.
 '''
 
-def parse_message(message):
-    msg = message.strip().lower().encode('ASCII', 'replace').decode('utf-8')
+def parse_url(url_str: str):
+    url = url_str.strip().lower().encode('ASCII', 'replace').decode('utf-8')
 
-    # XXX Use only first argument, ignore others
-    url = msg.split()[0]
     if '://' not in url:
         url = 'https://' + url
     err, scheme, hostname, port = parse_and_check_url(url)
@@ -68,7 +66,7 @@ class CheckCertBot:
         dispatcher.add_handler(start_cmd_handler)
         client_id_cmd_handler = CommandHandler('client_id', self.client_id_cmd)
         dispatcher.add_handler(client_id_cmd_handler)
-        list_cmd_handler = CommandHandler('list', self.list_cmd)
+        list_cmd_handler = CommandHandler('list', self.list_cmd, pass_args=True)
         dispatcher.add_handler(list_cmd_handler)
         add_cmd_handler = CommandHandler('add', self.add_cmd, pass_args=True)
         dispatcher.add_handler(add_cmd_handler)
@@ -116,30 +114,54 @@ class CheckCertBot:
     def client_id_cmd(self, bot, update):
         bot.send_message(chat_id=update.message.chat_id, text=update.message.chat_id)
 
-    def list_cmd(self, bot, update):
+    def list_cmd(self, bot, update, args):
         # XXX datetime('Never', 'localtime') == NoneType
-        res = self.servers_db.select('datetime(when_added, "localtime"), url, warn_before_expired, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
+        res = list()
+        short = False
+        if len(args) > 0 and args[0] == 'short':
+            short = True
+        if short:
+            res = self.servers_db.select('url, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
+        else:
+            res = self.servers_db.select('datetime(when_added, "localtime"), url, warn_before_expired, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
+
         output = list()
         for r in res:
             output.append('|'.join([str(elem) for elem in r.values()]))
         if len(output) == 0:
             output = ['Empty']
         else:
-            output.insert(0, '*When added|url|days to warn before expire|last check date|last check status*')
+            if short:
+                output.insert(0, '*url|last check date|last check status*')
+            else:
+                output.insert(0, '*When added|url|days to warn before expire|last check date|last check status*')
         bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', disable_web_page_preview=1, text='\n'.join(output))
 
     def add_cmd(self, bot, update, args):
-        error, url = parse_message(' '.join(args))
+        if len(args) < 1:
+            bot.send_message(chat_id=update.message.chat_id, text='Use /add URL [days]')
+            return
+        error, url = parse_url(args[0])
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
+        # Default days to warn
+        days = 5
+        if len(args) > 1:
+            if args[1].isdigit():
+                days = int(args[1])
+            else:
+                bot.send_message(chat_id=update.message.chat_id, text='days must be integer')
+                return
         # XXX Check for duplicates
-        # XXX days is not implemented yet
-        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "5", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0"')
+        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0"')
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully added: {url}')
 
     def hold_cmd(self, bot, update, args):
-        error, url = parse_message(' '.join(args))
+        if len(args) < 1:
+            bot.send_message(chat_id=update.message.chat_id, text='Use /hold URL')
+            return
+        error, url = parse_url(args[0])
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
@@ -147,7 +169,10 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Hold checking for: {url}')
 
     def unhold_cmd(self, bot, update, args):
-        (error, url) = parse_message(' '.join(args))
+        if len(args) < 1:
+            bot.send_message(chat_id=update.message.chat_id, text='Use /unhold URL')
+            return
+        (error, url) = parse_url(args[0])
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
@@ -155,7 +180,10 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Unhold checking for: {url}')
 
     def remove_cmd(self, bot, update, args):
-        error, url = parse_message(' '.join(args))
+        if len(args) < 1:
+            bot.send_message(chat_id=update.message.chat_id, text='Use /remove URL')
+            return
+        error, url = parse_url(args[0])
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
@@ -170,7 +198,7 @@ class CheckCertBot:
         bot.send_message(chat_id=update.message.chat_id, text='Unknown command. Try /help.')
 
     def message(self, bot, update):
-        error, url = parse_message(update.message.text)
+        error, url = parse_url(update.message.text)
         if error != '':
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=error)
             return
