@@ -98,12 +98,9 @@ class CheckCertBot:
         self.users_db.create(db_schemas.users_create_statement)
 
     def check_queue(self, bot, job):
-        not_empty = False
         while not remote_messages.empty():
-            not_empty = True
             chat_id, msg = remote_messages.get()
             bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=msg)
-        if not_empty:
             remote_messages.task_done()
 
     def start(self):
