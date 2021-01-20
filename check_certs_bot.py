@@ -158,7 +158,7 @@ class CheckCertBot:
         if len(res) > 0:
             bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'{url} already exists')
             return
-        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "0"')
+        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully added: {url}')
 
     def hold_cmd(self, bot, update, args):
