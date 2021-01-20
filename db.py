@@ -18,17 +18,18 @@ def dict_factory(cursor, row):
 
 class DB_factory:
     def __init__(self):
-        self.db = dict()
+        self.db_con = dict()
     def get_db(self, table: str, dbname: str = db_file):
-        if dbname not in self.db:
-            self.db[dbname] = DB(table, dbname)
-        return self.db[dbname]
+        if dbname not in self.db_con:
+            self.db_con[dbname] = sqlite3.connect(dbname,
+                                        check_same_thread=False)
+        return DB(table, self.db_con[dbname])
 
 # XXX Error checking
 class DB:
-    def __init__(self, table: str, dbname):
+    def __init__(self, table: str, db_con):
         self.table = table
-        self.con = sqlite3.connect(dbname, check_same_thread=False)
+        self.con = db_con
         self.con.row_factory = dict_factory
         self.cur = self.con.cursor()
     def __del__(self):
