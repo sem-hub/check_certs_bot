@@ -109,7 +109,7 @@ class CheckCertBot:
     def check_queue(self, bot, job):
         while not remote_messages.empty():
             chat_id, msg = remote_messages.get()
-            bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=msg)
+            bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=escape_markdown(msg))
             remote_messages.task_done()
 
     def start(self):
