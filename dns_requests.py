@@ -28,23 +28,133 @@ def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False, onl
             break
     return r
 
-def get_dns_request(dname: str, rtype: str, quiet=True) -> list:
-    a = list()
+def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
+    result = list()
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
         if not quiet:
             logging.warning(f'No DNS record {rtype} found for {dname}')
-        return []
+        return list()
     except dns.resolver.NoAnswer:
         pass
     else:
         for rdata in answers:
-            a.append(rdata)
-    return a
+            result.append(rdata)
+    return result
 
-def get_tlsa_record(fqdn: str, port: int) -> list:
-    rr_str = '_'+str(port)+'._tcp.'+fqdn+'.'
-    dname = dns.name.from_text(rr_str)
+# Returns: dict[zone] -> autority servers' adresses for the zone
+#                        only one elemeint in the dictionary always
+def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
+    dlevel = dname.split('.')
+    dlevel.reverse()
+    default_resolver = dns.resolver.get_default_resolver()
+    nameservers = default_resolver.nameservers
 
-    return get_dns_request(dname, 'TLSA')
+    authority = dict()
+    sdomain = ''
+    zone = ''
+    for l in dlevel:
+        sdomain = l + '.' + sdomain
+        query = dns.message.make_query(sdomain, dns.rdatatype.NS)
+        response = dns.query.tcp(query, nameservers[0])
+        i = 1
+        while response.rcode() != dns.rcode.NOERROR and i < len(nameservers):
+            response = dns.query.tcp(query, nameservers[i])
+            i = i + 1
+        # We tried all nameservers and got errors for each
+        if response.rcode() != dns.rcode.NOERROR:
+            if not quiet:
+                logging.debug(f'All DNS queried and all returned error for {dname}')
+            return authority
+
+        rrset = None
+        if len(response.authority) > 0:
+            rrset = response.authority[0]
+        else:
+            rrset = response.answer[0]
+
+        ns = list()
+        for rr in rrset:
+            if rr.rdtype == dns.rdatatype.NS:
+                aserver = rr.target
+                logging.debug('%s is authoritative for %s' % (aserver, sdomain))
+                for r in default_resolver.resolve(aserver).rrset:
+                    ns.append(r.to_text())
+        if len(ns) > 0:
+            nameservers = ns
+            authority.clear()
+            authority[sdomain] = ns
+    return authority
+
+def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
+    ns_list = get_authority_ns_for(dname, quiet)
+    zone = list(ns_list.keys())[0]
+    # Get DNSKEY for zone
+    request = dns.message.make_query(zone, dns.rdatatype.DNSKEY, want_dnssec=True)
+    nsaddr = ns_list[zone]
+    response = dns.query.tcp(request, nsaddr[0])
+    i = 1
+    # Try all servers if any error occured
+    while response.rcode() != dns.rcode.NOERROR and \
+          len(response.answer) != 2 and \
+          i < len(nsaddr):
+        response = dns.query.tcp(query, nsaddr[i])
+        i = i + 1
+    if response.rcode() != dns.rcode.NOERROR:
+        if not quiet:
+            logging.error(f'zone {zone} resolve error')
+        return list()
+    if len(response.answer) != 2:
+        if not quiet:
+            logging.error(f'zone {zone} is not signed')
+        return list()
+    answer = response.answer
+    dnskey = answer[0]
+
+    # check zone signature
+    zname = dns.name.from_text(zone)
+    try:
+        dns.dnssec.validate(dnskey, answer[1], {zname:dnskey})
+    except dns.dnssec.ValidationFailure:
+        if not quiet:
+            logging.error(f'zone {zone} signature error')
+        return list()
+
+    name = dns.name.from_text(dname)
+    request = dns.message.make_query(name, rtype, want_dnssec=True)
+    response = dns.query.tcp(request, nsaddr[0])
+    i = 1
+    # Try all servers if any error occured
+    while response.rcode() != dns.rcode.NOERROR and \
+          len(response.answer) < 2 and \
+          i < len(nsaddr):
+        response = dns.query.tcp(request, nsaddr[i])
+        i = i + 1
+    if response.rcode() != dns.rcode.NOERROR:
+        if not quiet:
+            logging.error(f'{dname} resolve error')
+        return list()
+    if len(response.answer) < 2:
+        if not quiet:
+            logging.error(f'{dname} is not signed')
+        return list()
+    answer = response.answer
+    try:
+        dns.dnssec.validate(answer[0],answer[1],{zname:dnskey})
+    except dns.dnssec.ValidationFailure:
+        if not quiet:
+            logging.error(f'\'{rtype}\' record for {dname} signature error')
+        return list()
+
+    result = list()
+    for rr in answer:
+        if rr.rdtype == dns.rdatatype.from_text(rtype):
+            result.append(rr.to_rdataset()[0])
+    return result
+
+def get_tlsa_record(fqdn: str, port: int, quiet: bool = True) -> list:
+    rr_str = '_'+str(port)+'._tcp.'+fqdn
+
+    # Ask for TLSA only with DNSSEC request
+    return get_dnssec_request(rr_str, 'TLSA', quiet)

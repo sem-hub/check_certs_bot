@@ -25,8 +25,8 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> s
         m.update(dump)
         return m.digest()
 
-def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> str:
-    answer = get_tlsa_record(fqdn, port)
+def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> str:
+    answer = get_tlsa_record(fqdn, port, quiet)
 
     if len(answer) == 0:
         return 'not found'

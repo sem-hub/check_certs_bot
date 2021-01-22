@@ -1,5 +1,6 @@
 certifi 	# Just for a case. python-telegram-bot use it too
-dnspython>=2.0.0
+cryptography    # for DNSSEC
+dnspython>=2.0.0        # after query() -> reslove() method renamed
 ocsp-checker
 pem
 pyOpenSSL

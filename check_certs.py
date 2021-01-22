@@ -122,18 +122,18 @@ def check_cert(url_str: str, flags: dict) -> str:
                                 continue
                         if not quiet:
                             message = message + 'Certificate is good\n'
-        # only good certificate here
-        # Run TLSA check if we have TLSA record
-        res = check_tlsa(fqdn, port, chain[0])
-        if res == 'OK':
-            if not quiet:
-                message = message + 'TLSA is *OK*\n'
-        else:
-            if res == 'not found':
+            # only good certificate here
+            # Run TLSA check if we have TLSA record
+            res = check_tlsa(fqdn, port, chain[0], quiet)
+            if res == 'OK':
                 if not quiet:
-                    message = message + f'TLSA is not found. Ignored\n'
+                    message = message + 'TLSA is *OK*\n'
             else:
-                message = message + f'TLSA is *{res}*\n'
+                if res == 'not found':
+                    if not quiet:
+                        message = message + f'TLSA is not found. Ignored\n'
+                else:
+                    message = message + f'TLSA is *{res}*\n'
 
     return message
 
