@@ -15,6 +15,7 @@ work_dir = path.dirname(path.abspath(__file__))
 sys.path.append(work_dir)
 
 from check_validity import parse_and_check_url
+from escape_markdown import escape_markdown
 from db import DB_factory
 import db_schemas
 
@@ -234,7 +235,7 @@ class CheckCertBot:
         for i in range(0, len(result), 4095):
             bot.send_message(chat_id=update.message.chat_id,
                     parse_mode='Markdown', disable_web_page_preview=1,
-                    text=result[i:i+4094].decode('utf8'))
+                    text=escape_markdown(result[i:i+4094].decode('utf8')))
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
