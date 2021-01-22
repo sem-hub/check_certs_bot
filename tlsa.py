@@ -42,4 +42,4 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> s
     if result:
         return 'OK'
     else:
-        return 'is not match'
+        return 'not match'
