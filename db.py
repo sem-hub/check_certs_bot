@@ -31,25 +31,35 @@ class DB:
         self.table = table
         self.con = db_con
         self.con.row_factory = dict_factory
-        self.cur = self.con.cursor()
     def __del__(self):
         self.con.close()
     def create(self, statement: str):
-        self.cur.execute(statement)
+        logging.debug(statement)
+        cur = self.con.cursor()
+        cur.execute(statement)
         self.con.commit()
     def select(self, what: str, where: str = 'true') -> list:
         logging.debug(f'SELECT {what} FROM {self.table} WHERE {where}')
-        self.cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
-        return self.cur.fetchall()
+        cur = self.con.cursor()
+        cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
+        return cur.fetchall()
     def insert(self, fields: str, values: str):
         if fields == None or fields == '':
-            self.cur.execute(f'INSERT INTO {self.table} VALUES ({values})')
+            logging.debug(f'INSERT INTO {self.table} VALUES ({values})')
+            cur = self.con.cursor()
+            cur.execute(f'INSERT INTO {self.table} VALUES ({values})')
         else:
-            self.cur.execute(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
+            logging.debug(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
+            cur = self.con.cursor()
+            cur.execute(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
         self.con.commit()
     def update(self, what: str, where: str):
-        self.cur.execute(f'UPDATE {self.table} SET {what} WHERE {where}')
+        logging.debug(f'UPDATE {self.table} SET {what} WHERE {where}')
+        cur = self.con.cursor()
+        cur.execute(f'UPDATE {self.table} SET {what} WHERE {where}')
         self.con.commit()
     def delete(self, where: str):
-        self.cur.execute(f'DELETE FROM {self.table} WHERE {where}')
+        logging.debug(f'DELETE FROM {self.table} WHERE {where}')
+        cur = self.con.cursor()
+        cur.execute(f'DELETE FROM {self.table} WHERE {where}')
         self.con.commit()
