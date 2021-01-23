@@ -23,7 +23,7 @@ MAIL_PROTO = ['smtp', 'smtps', 'submission']
 
 def check_cert(url_str: str, flags: dict) -> str:
     # For fast using
-    quiet = flags['quiet']
+    quiet = flags.get('quiet')
 
     err, scheme, fqdn, port = parse_and_check_url(url_str)
     if err != '':
@@ -43,8 +43,8 @@ def check_cert(url_str: str, flags: dict) -> str:
             mx_host = rdata.exchange.to_text()[:-1]
             if not quiet:
                 message = message + f'  {mx_host}\n'
-            for addr in get_all_dns(rdata.exchange, flags['only_ipv4'],
-                    flags['only_ipv6'], flags['only_one']):
+            for addr in get_all_dns(rdata.exchange, flags.get('only_ipv4'),
+                    flags.get('only_ipv6'), flags.get('only_one')):
                 addresses.append((mx_host,addr))
 
     # Only smtp protocol needs extra EHLO/STARTTLS commands
@@ -54,7 +54,7 @@ def check_cert(url_str: str, flags: dict) -> str:
 
     # if we don't have addresses from MX records
     if len(addresses) == 0:
-        for addr in get_all_dns(fqdn, flags['only_ipv4'], flags['only_ipv6'], flags['only_one']):
+        for addr in get_all_dns(fqdn, flags.get('only_ipv4'), flags.get('only_ipv6'), flags.get('only_one')):
             addresses.append((fqdn,addr))
 
     if len(addresses) == 0:
@@ -91,7 +91,7 @@ def check_cert(url_str: str, flags: dict) -> str:
 
             error = verify_cert(chain)
 
-            if flags['print_id']:
+            if flags.get('print_id'):
                 message = message + 'ID: %X\n' % cert.get_serial_number()
             if not quiet:
                 message = message + cert_to_text(cert) + '\n'
@@ -108,7 +108,7 @@ def check_cert(url_str: str, flags: dict) -> str:
                     continue
                 else:
                     days_before_expired = get_days_before_expired(cert)
-                    if flags['warn_before_expired'] and \
+                    if flags.get('warn_before_expired') and \
                         days_before_expired <= flags['warn_before_expired']:
                             message = message + 'Certificate fill expired ' + \
                                 f'after {days_before_expired} days\n'

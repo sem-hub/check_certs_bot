@@ -25,8 +25,6 @@ def proc_exec(rt: tuple) -> dict:
     flags['quiet'] = True
     flags['print_id'] = True
     flags['warn_before_expired'] = r['warn_before_expired']
-    flags['only_ipv4'] = False
-    flags['only_ipv6'] = False
     flags['only_one'] = True
 
     res = dict()
