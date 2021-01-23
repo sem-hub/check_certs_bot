@@ -15,6 +15,7 @@ from db import DB_factory
 from send_to_chat import send_to_chat
 
 def proc_exec(rt: tuple) -> dict:
+    global dry_run
     r = rt[1]
     logging.debug(f'{r["url"]}')
     if r['status'] == 'HOLD':
@@ -38,9 +39,7 @@ def proc_exec(rt: tuple) -> dict:
     return res
 
 def process_results(r: dict):
-    global db_factory
     global servers_db
-    global dry_run
 
     if not r:
         return
@@ -83,7 +82,6 @@ def main():
     else:
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
-    global db_factory
     global servers_db
     global dry_run
     dry_run = args.dry_run
