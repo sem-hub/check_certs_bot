@@ -114,7 +114,7 @@ def check_cert(url_str: str, flags: dict) -> str:
                                 f'after {days_before_expired} days\n'
                     else:
                         # ocspcheck can't check only one certificate. It needs a chain
-                        if len(chain) > 1:
+                        if len(chain) > 1 and not flags.get('no_ocsp'):
                             result = check_ocsp(chain)
                             if result != 'GOOD' or not quiet:
                                 message = message + f'OCSP check result: *{result}*\n'
@@ -124,23 +124,24 @@ def check_cert(url_str: str, flags: dict) -> str:
                             message = message + 'Certificate is good\n'
             # only good certificate here
             # Run TLSA check if we have TLSA record
-            res = check_tlsa(fqdn, port, chain[0], quiet)
-            if res == 'OK':
-                if not quiet:
-                    message = message + 'TLSA is *OK*\n'
-            else:
-                if res == 'not found':
+            if not flags.get('no_tlsa'):
+                res = check_tlsa(fqdn, port, chain[0], quiet)
+                if res == 'OK':
                     if not quiet:
-                        message = message + f'TLSA is not found. Ignored\n'
+                        message = message + 'TLSA is *OK*\n'
                 else:
-                    message = message + f'TLSA is *{res}*\n'
+                    if res == 'not found':
+                        if not quiet:
+                            message = message + f'TLSA is not found. Ignored\n'
+                    else:
+                        message = message + f'TLSA is *{res}*\n'
 
     return message
 
 # MAIN ()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('url', nargs=1)
+    parser.add_argument('url', nargs=1, help='protocol://hostname.domain:port')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Print much info for debugging')
     parser.add_argument('-q', '--quiet', action='store_true',
@@ -155,6 +156,10 @@ if __name__ == '__main__':
                         help='Use only IPv6 addresses for checks')
     parser.add_argument('-1', '--only-one', action='store_true',
                         help='Use only first IP for checking')
+    parser.add_argument('--no-tlsa', action='store_true',
+                        help='Prevent TLSA checking')
+    parser.add_argument('--no-ocsp', action='store_true',
+                        help='Prevent OCSP checking')
     args = parser.parse_args()
     url = args.url[0]
 
@@ -165,6 +170,8 @@ if __name__ == '__main__':
     flags['only_ipv4'] = args.only_ipv4
     flags['only_ipv6'] = args.only_ipv6
     flags['only_one'] = args.only_one
+    flags['no_tlsa'] = args.no_tlsa
+    flags['no_ocsp'] = args.no_ocsp
 
     if args.debug:
       logging.basicConfig(level=logging.DEBUG)
