@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.escape_markdown import escape_markdown
 from check_certs_lib.db import DB_factory
-import check_certs_lib.db_schemas
+import check_certs_lib.db_schemas as db_schemas
 
 TOKEN_FILE = '/var/spool/check_certs/TOKEN'
 
