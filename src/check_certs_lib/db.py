@@ -20,7 +20,7 @@ class DB_factory:
         self.db_con = dict()
     def get_db(self, table: str, dbname: str = DB_FILE):
         db_dir = os.path.dirname(dbname)
-        if db_dir and '.' not is db_dir:
+        if db_dir and '.' not in db_dir:
             os.makedirs(db_dir, exist_ok=True)
         if dbname not in self.db_con:
             self.db_con[dbname] = sqlite3.connect(dbname,
