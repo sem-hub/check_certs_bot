@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 import sqlite3
 
-DB_DIR = '/var/spool/check_certs/'
-db_file = DB_DIR+'checkcerts.sqlite3'
+DB_FILE = '/var/spool/check_certs/checkcerts.sqlite3'
 
 def dict_factory(cursor, row):
     d = {}
@@ -18,7 +18,10 @@ def dict_factory(cursor, row):
 class DB_factory:
     def __init__(self):
         self.db_con = dict()
-    def get_db(self, table: str, dbname: str = db_file):
+    def get_db(self, table: str, dbname: str = DB_FILE):
+        db_dir = os.path.dirname(dbname)
+        if db_dir and '.' not is db_dir:
+            os.makedirs(db_dir, exist_ok=True)
         if dbname not in self.db_con:
             self.db_con[dbname] = sqlite3.connect(dbname,
                                         check_same_thread=False)
