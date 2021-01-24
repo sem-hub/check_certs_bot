@@ -16,7 +16,11 @@ from check_certs_lib.escape_markdown import escape_markdown
 from check_certs_lib.db import DB_factory
 import check_certs_lib.db_schemas
 
+TOKEN_FILE = '/var/spool/check_certs/TOKEN'
+
+# For running check_certs.py
 prog_dir = path.dirname(path.abspath(__file__))
+
 help_text='''
 A bot for checking HTTP servers certificates.
 
@@ -255,6 +259,6 @@ if __name__ == '__main__':
     t.daemon = True
     t.start()
 
-    token = open(work_dir+'/TOKEN', 'r').read().rstrip('\n')
+    token = open(TOKEN_FILE, 'r').read().rstrip('\n')
     bot = CheckCertBot(token)
     bot.start()
