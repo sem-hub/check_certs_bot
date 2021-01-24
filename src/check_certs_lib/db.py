@@ -4,7 +4,7 @@ import logging
 import sqlite3
 
 DB_DIR = '/var/spool/check_certs/'
-db_file = prog_dir+'checkcerts.sqlite3'
+db_file = DB_DIR+'checkcerts.sqlite3'
 
 def dict_factory(cursor, row):
     d = {}
