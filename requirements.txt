@@ -4,6 +4,6 @@ dnspython>=2.0.0        # after query() -> reslove() method renamed
 ocsp-checker
 pem
 pyOpenSSL
-python-telegram-bot==11.1.0
+python-telegram-bot>13.0.0
 pytz
 rpyc

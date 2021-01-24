@@ -108,29 +108,30 @@ class CheckCertBot:
             self.users_db.update('last_activity=CURRENT_TIMESTAMP', f'id="{message.chat_id}"')
         self.activity_db.insert('user_id, cmd, date', f'"{message.chat_id}", "{cmd}", CURRENT_TIMESTAMP')
 
-    def check_queue(self, bot, job):
+    def check_queue(self, context):
         while not remote_messages.empty():
             chat_id, msg = remote_messages.get()
-            bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=escape_markdown(msg))
+            context.bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=escape_markdown(msg))
             remote_messages.task_done()
 
     def start(self):
         self.updater.start_polling()
         self.updater.idle()
 
-    def help_cmd(self, bot, update):
+    def help_cmd(self, update, context):
         self.user_activity('/help', update.message)
         # Remove ReplyKeyboard if it was there
         #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
-        #old_message = bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
-        bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text=help_text)
+        #old_message = context.bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
+        context.bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text=help_text)
 
-    def id_cmd(self, bot, update):
+    def id_cmd(self, update, context):
         self.user_activity('/id', update.message)
         text = f'{update.message.chat_id}: {update.message.chat.username} {update.message.chat.first_name} {update.message.chat.last_name} {update.message.from_user.language_code}'
-        bot.send_message(chat_id=update.message.chat_id, text=text)
+        context.bot.send_message(chat_id=update.message.chat_id, text=text)
 
-    def list_cmd(self, bot, update, args):
+    def list_cmd(self, update, context):
+        args = context.args
         self.user_activity('/list {args}', update.message)
         res = list()
         short = False
@@ -151,16 +152,17 @@ class CheckCertBot:
                 output.insert(0, '*url|last check date|last check status*')
             else:
                 output.insert(0, '*When added|url|days to warn before expire|last check date|last check status*')
-        bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', disable_web_page_preview=1, text='\n'.join(output))
+        context.bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', disable_web_page_preview=1, text='\n'.join(output))
 
-    def add_cmd(self, bot, update, args):
+    def add_cmd(self, update, context):
+        args = context.args
         self.user_activity('/add {args}', update.message)
         if len(args) < 1:
-            bot.send_message(chat_id=update.message.chat_id, text='Use /add URL [days]')
+            context.bot.send_message(chat_id=update.message.chat_id, text='Use /add URL [days]')
             return
         error, url = parse_url(args[0])
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
+            context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         # Default days to warn
         days = 5
@@ -168,76 +170,81 @@ class CheckCertBot:
             if args[1].isdigit():
                 days = int(args[1])
             else:
-                bot.send_message(chat_id=update.message.chat_id, text='days must be integer')
+                context.bot.send_message(chat_id=update.message.chat_id, text='days must be integer')
                 return
         # Check for duplicates
         res = self.servers_db.select('url', f'url="{url}" AND chat_id="{str(update.message.chat_id)}"')
         if len(res) > 0:
-            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'{url} already exists')
+            context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'{url} already exists')
             return
         # datetime('Never', 'localtime') == NoneType. So I use 0000-01-01 00:00:00 as 'never' value.
         self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
-        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully added: {url}')
+        context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully added: {url}')
 
-    def hold_cmd(self, bot, update, args):
+    def hold_cmd(self, update, context):
+        args = context.args
         self.user_activity('/hold {args}', update.message)
         if len(args) < 1:
-            bot.send_message(chat_id=update.message.chat_id, text='Use /hold URL')
+            context.bot.send_message(chat_id=update.message.chat_id, text='Use /hold URL')
             return
         error, url = parse_url(args[0])
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
+            context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         self.servers_db.update('status="HOLD"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Hold checking for: {url}')
+        context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Hold checking for: {url}')
 
-    def unhold_cmd(self, bot, update, args):
+    def unhold_cmd(self, update, context):
+        args = context.args
         self.user_activity('/unhold {args}', update.message)
         if len(args) < 1:
-            bot.send_message(chat_id=update.message.chat_id, text='Use /unhold URL')
+            context.bot.send_message(chat_id=update.message.chat_id, text='Use /unhold URL')
             return
         (error, url) = parse_url(args[0])
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
+            context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         self.servers_db.update('status="None"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Unhold checking for: {url}')
+        context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Unhold checking for: {url}')
 
-    def remove_cmd(self, bot, update, args):
+    def remove_cmd(self, update, context):
+        args = context.args
         self.user_activity(f'/remove {args}', update.message)
         if len(args) < 1:
-            bot.send_message(chat_id=update.message.chat_id, text='Use /remove URL')
+            context.bot.send_message(chat_id=update.message.chat_id, text='Use /remove URL')
             return
         error, url = parse_url(args[0])
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
+            context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         self.servers_db.delete(f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully removed: {url}')
+        context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully removed: {url}')
 
-    def reset_cmd(self, bot, update):
+    def reset_cmd(self, update, context):
         self.user_activity('/reset', update.message)
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
-        bot.send_message(chat_id=update.message.chat_id, text='Successfully reseted')
+        context.bot.send_message(chat_id=update.message.chat_id, text='Successfully reseted')
 
-    def unknown_cmd(self, bot, update):
+    def unknown_cmd(self, update, context):
         self.user_activity('unknown', update.message)
-        bot.send_message(chat_id=update.message.chat_id, text='Unknown command. Try /help.')
+        context.bot.send_message(chat_id=update.message.chat_id, text='Unknown command. Try /help.')
 
-    def message(self, bot, update):
+    def message(self, update, context):
         self.user_activity(update.message.text, update.message)
         error, url = parse_url(update.message.text)
         if error != '':
-            bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=error)
+            context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=error)
             return
 
-        bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1,
+        context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1,
                 text=f'Checking certificate for: {url}')
         result = subprocess.check_output([prog_dir+'/check_certs.py', url])
-        for i in range(0, len(result), 4095):
-            bot.send_message(chat_id=update.message.chat_id,
+        output_text = escape_markdown(result.decode('utf-8'))
+        max_len = telegram.constants.MAX_MESSAGE_LENGTH
+        for i in range(0, len(output_text), max_len):
+            context.bot.send_message(chat_id=update.message.chat_id,
                     parse_mode='Markdown', disable_web_page_preview=1,
-                    text=escape_markdown(result[i:i+4094].decode('utf8')))
+                    text=output_text[i:i+max_len])
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
@@ -248,7 +255,7 @@ if __name__ == '__main__':
     if args.debug:
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
     else:
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
 
     remote_messages = queue.Queue()
 
