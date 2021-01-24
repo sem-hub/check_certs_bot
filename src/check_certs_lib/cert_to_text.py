@@ -1,13 +1,9 @@
 import datetime
 import logging
 from pytz import UTC
-from os import sys, path
 from OpenSSL import crypto
 
-work_dir = path.dirname(path.abspath(__file__))
-sys.path.append(work_dir)
-
-from escape_markdown import escape_markdown
+from check_certs_lib.escape_markdown import escape_markdown
 
 def decode_generalized_time(gt: bytes) -> str:
     return datetime.datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)

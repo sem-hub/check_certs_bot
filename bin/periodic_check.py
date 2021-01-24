@@ -3,16 +3,12 @@
 import argparse
 import logging
 from multiprocessing import Pool
-from os import sys, path
 import re
 
-work_dir = path.dirname(path.abspath(__file__))
-sys.path.append(work_dir)
-
-from check_certs import check_cert
-from escape_markdown import escape_markdown
-from db import DB_factory
-from send_to_chat import send_to_chat
+from check_certs_lib.check_certs import check_cert
+from check_certs_lib.escape_markdown import escape_markdown
+from check_certs_lib.db import DB_factory
+from check_certs_lib.send_to_chat import send_to_chat
 
 def proc_exec(rt: tuple) -> dict:
     global dry_run

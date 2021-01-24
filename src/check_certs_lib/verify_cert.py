@@ -2,13 +2,9 @@ import certifi
 import datetime
 import pem
 from pytz import UTC
-from os import sys, path
 from OpenSSL import crypto
 
-work_dir = path.dirname(path.abspath(__file__))
-sys.path.append(work_dir)
-
-from cert_to_text import decode_generalized_time
+from check_certs_lib.cert_to_text import decode_generalized_time
 
 def get_days_before_expired(cert: crypto.X509) -> int:
     expired_dt = decode_generalized_time(cert.get_notAfter())

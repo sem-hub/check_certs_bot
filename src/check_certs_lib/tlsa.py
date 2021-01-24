@@ -1,12 +1,8 @@
 import hashlib
 import logging
 from OpenSSL import crypto
-from os import sys, path
 
-work_dir = path.dirname(path.abspath(__file__))
-sys.path.append(work_dir)
-
-from dns_requests import get_tlsa_record
+from check_certs_lib.dns_requests import get_tlsa_record
 
 def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> str:
     if selector == 1:

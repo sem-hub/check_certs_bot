@@ -3,21 +3,17 @@
 import argparse
 import datetime
 import logging
-from os import sys, path
 from pytz import UTC
 import ssl
 
-work_dir = path.dirname(path.abspath(__file__))
-sys.path.append(work_dir)
-
-from check_validity import parse_and_check_url
-from get_cert_from_server import get_chain_from_server
-from verify_cert import verify_cert, match_domain, get_days_before_expired
-from cert_to_text import cert_to_text
-from escape_markdown import escape_markdown
-from dns_requests import get_dns_request, check_fqdn, get_all_dns
-from tlsa import check_tlsa
-from ocsp import check_ocsp
+from check_certs_lib.check_validity import parse_and_check_url
+from check_certs_lib.get_cert_from_server import get_chain_from_server
+from check_certs_lib.verify_cert import verify_cert, match_domain, get_days_before_expired
+from check_certs_lib.cert_to_text import cert_to_text
+from check_certs_lib.escape_markdown import escape_markdown
+from check_certs_lib.dns_requests import get_dns_request, check_fqdn, get_all_dns
+from check_certs_lib.tlsa import check_tlsa
+from check_certs_lib.ocsp import check_ocsp
 
 MAIL_PROTO = ['smtp', 'smtps', 'submission']
 

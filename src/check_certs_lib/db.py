@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 import logging
-from os import path
 import sqlite3
 
-prog_dir = path.dirname(path.abspath(__file__))
-db_file = prog_dir+'/checkcerts.sqlite3'
+DB_DIR = '/var/spool/check_certs/'
+db_file = prog_dir+'checkcerts.sqlite3'
 
 def dict_factory(cursor, row):
     d = {}

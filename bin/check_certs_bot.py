@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-from os import sys, path
+from os import path
 import queue
 import rpyc
 import subprocess
@@ -11,14 +11,12 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import threading
 from urllib.parse import urlsplit
 
-work_dir = path.dirname(path.abspath(__file__))
-sys.path.append(work_dir)
+from check_certs_lib.check_validity import parse_and_check_url
+from check_certs_lib.escape_markdown import escape_markdown
+from check_certs_lib.db import DB_factory
+import check_certs_lib.db_schemas
 
-from check_validity import parse_and_check_url
-from escape_markdown import escape_markdown
-from db import DB_factory
-import db_schemas
-
+prog_dir = path.dirname(path.abspath(__file__))
 help_text='''
 A bot for checking HTTP servers certificates.
 
@@ -231,7 +229,7 @@ class CheckCertBot:
 
         bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1,
                 text=f'Checking certificate for: {url}')
-        result = subprocess.check_output([work_dir+'/check_certs.py', url])
+        result = subprocess.check_output([prog_dir+'/check_certs.py', url])
         for i in range(0, len(result), 4095):
             bot.send_message(chat_id=update.message.chat_id,
                     parse_mode='Markdown', disable_web_page_preview=1,

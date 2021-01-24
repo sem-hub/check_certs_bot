@@ -1,14 +1,8 @@
 import datetime
 import socket
-import sys
 from OpenSSL import SSL, crypto
 
-from os import sys, path
-
-work_dir = path.dirname(path.abspath(__file__))
-sys.path.append(work_dir)
-
-from verify_cert import verify_cert
+from check_certs_lib.verify_cert import verify_cert
 
 # return (err, list(x509))
 def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, list):
