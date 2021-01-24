@@ -32,15 +32,19 @@ systemctl enable check-certs-bot
 systemctl start check-certs-bot
 ```
 
-check_certs.py utility to check server's certificate:
+check_certs.py - utility to check server's certificate:
 ```bash
 check_certs.py protocol://server.domain:port 
 check_certs.py --help
 ```
 
 periodic_check.py - run periodic checks for domains from DB.
-Use it with cron(8).
 Adding domains into DB with the bot mentioned above.
+Use it with cron(8).
+crontab -e example:
+```
+3 5 * * * /usr/local/bin/periodic_check.py
+```
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
