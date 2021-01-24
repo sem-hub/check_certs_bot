@@ -1,6 +1,7 @@
 import certifi
 import datetime
 import pem
+import re
 from pytz import UTC
 from OpenSSL import crypto
 
@@ -32,10 +33,10 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
     for d in domains:
         if fqdn == d:
             return True
-        if '*' in fqdn:
+        if '*' in d:
             rx= '^'+d.replace('.','\.').replace('*','[^\.]+')+'$'
-            re.compile(rx)
-            if re.match(fqdn):
+            rec = re.compile(rx)
+            if rec.match(fqdn):
                 return True
     return False
 
