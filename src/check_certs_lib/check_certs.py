@@ -3,8 +3,7 @@ import logging
 from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.get_cert_from_server import get_chain_from_server
 from check_certs_lib.verify_cert import verify_cert, match_domain, get_days_before_expired
-from check_certs_lib.cert_to_text import cert_to_text
-from check_certs_lib.escape_markdown import escape_markdown
+from check_certs_lib.cert_to_text import cert_to_text, need_bold
 from check_certs_lib.dns_requests import get_dns_request, check_fqdn, get_all_dns
 from check_certs_lib.tlsa import check_tlsa
 from check_certs_lib.ocsp import check_ocsp
@@ -14,6 +13,7 @@ MAIL_PROTO = ['smtp', 'smtps', 'submission']
 def check_cert(url_str: str, flags: dict) -> str:
     # For fast using
     quiet = flags.get('quiet')
+    b = need_bold(flags.get('need_markup'))
 
     err, scheme, fqdn, port = parse_and_check_url(url_str)
     if err != '':
@@ -84,7 +84,7 @@ def check_cert(url_str: str, flags: dict) -> str:
             if flags.get('print_id'):
                 message = message + 'ID: %X\n' % cert.get_serial_number()
             if not quiet:
-                message = message + cert_to_text(cert) + '\n'
+                message = message + cert_to_text(cert, flags.get('need_markup')) + '\n'
 
             # If we have bad certificate here, don't check it for matching
             if error:
@@ -107,7 +107,7 @@ def check_cert(url_str: str, flags: dict) -> str:
                         if len(chain) > 1 and not flags.get('no_ocsp'):
                             result = check_ocsp(chain)
                             if result != 'GOOD' or not quiet:
-                                message = message + f'OCSP check result: *{result}*\n'
+                                message = message + f'OCSP check result: {b(result)}\n'
                             if result != 'GOOD':
                                 continue
                         if not quiet:
@@ -118,12 +118,12 @@ def check_cert(url_str: str, flags: dict) -> str:
                 res = check_tlsa(fqdn, port, chain[0], quiet)
                 if res == 'OK':
                     if not quiet:
-                        message = message + 'TLSA is *OK*\n'
+                        message = message + 'TLSA is {b("OK")}\n'
                 else:
                     if res == 'not found':
                         if not quiet:
                             message = message + f'TLSA is not found. Ignored\n'
                     else:
-                        message = message + f'TLSA is *{res}*\n'
+                        message = message + f'TLSA is {b(res)}\n'
 
     return message

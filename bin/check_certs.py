@@ -23,6 +23,8 @@ if __name__ == '__main__':
                         help='Use only IPv6 addresses for checks')
     parser.add_argument('-1', '--only-one', action='store_true',
                         help='Use only first IP for checking')
+    parser.add_argument('-m', '--markup', action='store_true',
+                        help='Use markup for printing certificate data')
     parser.add_argument('--no-tlsa', action='store_true',
                         help='Prevent TLSA checking')
     parser.add_argument('--no-ocsp', action='store_true',
@@ -37,6 +39,7 @@ if __name__ == '__main__':
     flags['only_ipv4'] = args.only_ipv4
     flags['only_ipv6'] = args.only_ipv6
     flags['only_one'] = args.only_one
+    flags['need_markup'] = args.markup
     flags['no_tlsa'] = args.no_tlsa
     flags['no_ocsp'] = args.no_ocsp
 

@@ -12,7 +12,6 @@ import threading
 from urllib.parse import urlsplit
 
 from check_certs_lib.check_validity import parse_and_check_url
-from check_certs_lib.escape_markdown import escape_markdown
 from check_certs_lib.db import DB_factory
 import check_certs_lib.db_schemas as db_schemas
 
@@ -111,7 +110,7 @@ class CheckCertBot:
     def check_queue(self, context):
         while not remote_messages.empty():
             chat_id, msg = remote_messages.get()
-            context.bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=escape_markdown(msg))
+            context.bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=msg)
             remote_messages.task_done()
 
     def start(self):
@@ -238,12 +237,12 @@ class CheckCertBot:
 
         context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1,
                 text=f'Checking certificate for: {url}')
-        result = subprocess.check_output([prog_dir+'/check_certs.py', url])
-        output_text = escape_markdown(result.decode('utf-8'))
+        result = subprocess.check_output([prog_dir+'/check_certs.py', '-m', url])
+        output_text = result.decode('utf-8')
         max_len = telegram.constants.MAX_MESSAGE_LENGTH
         for i in range(0, len(output_text), max_len):
             context.bot.send_message(chat_id=update.message.chat_id,
-                    parse_mode='Markdown', disable_web_page_preview=1,
+                    parse_mode='HTML', disable_web_page_preview=1,
                     text=output_text[i:i+max_len])
 
 if __name__ == '__main__':

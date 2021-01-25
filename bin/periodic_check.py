@@ -6,7 +6,6 @@ from multiprocessing import Pool
 import re
 
 from check_certs_lib.check_certs import check_cert
-from check_certs_lib.escape_markdown import escape_markdown
 from check_certs_lib.db import DB_factory
 from check_certs_lib.send_to_chat import send_to_chat
 
@@ -46,14 +45,14 @@ def process_results(r: dict):
     if m == None:
         send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
         logging.debug(f'Error: |{result}|')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}"', f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}"', f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
         return
     cert_id = m.group(1)
     result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
     if result != '':
         send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
         logging.debug(f'Error*: {result}')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
     else:
         # It;s a first check or certificate did not changed
         if r['cert_id'] == '0' or cert_id == r['cert_id']:
@@ -62,7 +61,7 @@ def process_results(r: dict):
             result = 'Certificate was changed'
             send_to_chat(r['chat_id'], f'{r["url"]} check certificate:\n{result}')
         logging.debug(f'{result}')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{escape_markdown(result)}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
 
 def main():
     parser = argparse.ArgumentParser()
