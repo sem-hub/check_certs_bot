@@ -4,7 +4,7 @@ from OpenSSL import SSL, crypto
 
 from check_certs_lib.verify_cert import verify_cert
 
-# return (err, list(x509))
+# Return: (err, list(x509))
 def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, list):
     context = SSL.Context(method=SSL.SSLv23_METHOD)
 
@@ -44,7 +44,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -
 
     return (None, chain)
 
-# return (err, x509)
+# Return: (err, x509)
 def get_cert_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, crypto.X509):
     (error, chain) = get_chain_from_server(hostname, addr, port, starttls)
     if error:

@@ -1,7 +1,7 @@
 from OpenSSL import crypto
 from ocspchecker import ocspchecker
 
-# return string - an error or a result
+# Return string - an error or a result.
 def check_ocsp(cert_chain: list) -> str:
     cert_str_list = list()
 
