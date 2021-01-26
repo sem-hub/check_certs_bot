@@ -10,7 +10,7 @@ from check_certs_lib.ocsp import check_ocsp
 
 MAIL_PROTO = ['smtp', 'smtps', 'submission']
 
-def check_cert(url_str: str, flags: dict) -> str:
+def check_cert(url_str: str, **flags) -> str:
     # For fast using
     quiet = flags.get('quiet')
     b = need_bold(flags.get('need_markup'))

@@ -1,3 +1,5 @@
+# Schemas for creating of TABLES in DB
+
 users_create_statement='''CREATE TABLE IF NOT EXISTS users (
 id TEXT PRIMARY KEY,
 name TEXT,

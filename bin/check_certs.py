@@ -53,4 +53,4 @@ if __name__ == '__main__':
 
     logging.debug(f'url={url}')
 
-    print(check_cert(url, flags), end='')
+    print(check_cert(url, **flags), end='')

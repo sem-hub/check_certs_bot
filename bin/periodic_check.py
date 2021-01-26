@@ -4,6 +4,7 @@ import argparse
 import logging
 from multiprocessing import Pool
 import re
+from typing import NoReturn
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.db import DB_factory
@@ -16,22 +17,17 @@ def proc_exec(rt: tuple) -> dict:
     if r['status'] == 'HOLD':
         logging.debug('Skipped')
         return dict()
-    flags = dict()
-    flags['quiet'] = True
-    flags['print_id'] = True
-    flags['warn_before_expired'] = r['warn_before_expired']
-    flags['only_one'] = True
 
     res = dict()
     res['cert_id'] = r['cert_id']
     res['url'] = r['url']
     res['chat_id'] = r['chat_id']
-    res['out_text'] = check_cert(r['url'], flags)
+    res['out_text'] = check_cert(r['url'], quiet=True, print_id=True, warn_before_expired=r['warn_before_expired'], only_one=True)
     if not dry_run:
         process_results(res)
     return res
 
-def process_results(r: dict):
+def process_results(r: dict) -> NoReturn:
     global servers_db
 
     if not r:
