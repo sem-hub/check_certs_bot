@@ -24,35 +24,36 @@ class DB:
         self.table = table
         self.con = db_con
         self.con.row_factory = dict_factory
+        self.logger = logging.getLogger(__name__)
     def __del__(self):
         self.con.close()
     def create(self, statement: str) -> NoReturn:
-        logging.debug(statement)
+        self.logger.debug(statement)
         cur = self.con.cursor()
         cur.execute(statement)
         self.con.commit()
     def select(self, what: str, where: str = 'true') -> list:
-        logging.debug(f'SELECT {what} FROM {self.table} WHERE {where}')
+        self.logger.debug(f'SELECT {what} FROM {self.table} WHERE {where}')
         cur = self.con.cursor()
         cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
         return cur.fetchall()
     def insert(self, fields: str, values: str) -> NoReturn:
         if fields == None or fields == '':
-            logging.debug(f'INSERT INTO {self.table} VALUES ({values})')
+            self.logger.debug(f'INSERT INTO {self.table} VALUES ({values})')
             cur = self.con.cursor()
             cur.execute(f'INSERT INTO {self.table} VALUES ({values})')
         else:
-            logging.debug(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
+            self.logger.debug(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
             cur = self.con.cursor()
             cur.execute(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
         self.con.commit()
     def update(self, what: str, where: str) -> NoReturn:
-        logging.debug(f'UPDATE {self.table} SET {what} WHERE {where}')
+        self.logger.debug(f'UPDATE {self.table} SET {what} WHERE {where}')
         cur = self.con.cursor()
         cur.execute(f'UPDATE {self.table} SET {what} WHERE {where}')
         self.con.commit()
     def delete(self, where: str) -> NoReturn:
-        logging.debug(f'DELETE FROM {self.table} WHERE {where}')
+        self.logger.debug(f'DELETE FROM {self.table} WHERE {where}')
         cur = self.con.cursor()
         cur.execute(f'DELETE FROM {self.table} WHERE {where}')
         self.con.commit()
