@@ -6,7 +6,8 @@ name TEXT,
 full_name TEXT,
 language_code TEXT,
 first_met TEXT,
-last_activity TEXT
+last_activity TEXT,
+status TEXT
 )'''
 
 activity_create_statement='''CREATE TABLE IF NOT EXISTS activity (
