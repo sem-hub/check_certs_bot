@@ -8,6 +8,7 @@ from typing import NoReturn
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.db import DB_factory
+from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 from check_certs_lib.send_to_chat import send_to_chat
 
 def proc_exec(rt: tuple) -> dict:
@@ -41,14 +42,14 @@ def process_results(r: dict) -> NoReturn:
     if m == None:
         send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
         logging.debug(f'Error: |{result}|')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}"', f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}', f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
         return
     cert_id = m.group(1)
     result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
     if result != '':
         send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
         logging.debug(f'Error*: {result}')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',  f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
     else:
         # It;s a first check or certificate did not changed
         if r['cert_id'] == '0' or cert_id == r['cert_id']:
@@ -57,7 +58,7 @@ def process_results(r: dict) -> NoReturn:
             result = 'Certificate was changed'
             send_to_chat(r['chat_id'], f'{r["url"]} check certificate:\n{result}')
         logging.debug(f'{result}')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="{result}", cert_id="{cert_id}"',  f'url="{r["url"]}" AND chat_id="{r["chat_id"]}"')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',  f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
 
 def main():
     parser = argparse.ArgumentParser()
@@ -67,9 +68,10 @@ def main():
     args = parser.parse_args()
 
     if args.debug:
-        logging.basicConfig(format='%(levelname)s:*** %(message)s', level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG)
+        add_filter_to_all_handlers(Blacklist('urllib3'))
     else:
-        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+        logging.basicConfig(level=logging.INFO)
 
     global servers_db
     global dry_run

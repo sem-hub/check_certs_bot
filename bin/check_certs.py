@@ -4,6 +4,7 @@ import argparse
 import logging
 
 from check_certs_lib.check_certs import check_cert
+from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 
 # MAIN ()
 if __name__ == '__main__':
@@ -44,9 +45,10 @@ if __name__ == '__main__':
     flags['no_ocsp'] = args.no_ocsp
 
     if args.debug:
-      logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG)
+        add_filter_to_all_handlers(Blacklist('urllib3'))
     else:
-      logging.basicConfig(format='%(message)s', level=logging.INFO)
+        logging.basicConfig(format='%(message)s', level=logging.INFO)
 
     if '://' not in url:
         url = 'https://' + url
