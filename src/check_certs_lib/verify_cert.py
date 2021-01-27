@@ -34,7 +34,7 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
         if fqdn == d:
             return True
         if '*' in d:
-            rx= '^'+d.replace('.','\.').replace('*','[^\.]+')+'$'
+            rx= '^'+d.replace('.',r'\.').replace('*',r'[^\.]+')+'$'
             rec = re.compile(rx)
             if rec.match(fqdn):
                 return True
