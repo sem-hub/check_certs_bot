@@ -22,6 +22,7 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> s
         return m.digest()
 
 def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> str:
+    logger = logging.getLogger(__name__)
     answer = get_tlsa_record(fqdn, port, quiet=True)
 
     if len(answer) == 0:
@@ -30,7 +31,7 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> s
     for a in answer:
         if a.usage not in [1,3]:
             if not quiet:
-                logging.error('Only usage type 1 or 3 are supported')
+                logger.error('Only usage type 1 or 3 are supported')
             continue
 
         tlsa = generate_tlsa(cert, a.usage, a.selector, a.mtype)

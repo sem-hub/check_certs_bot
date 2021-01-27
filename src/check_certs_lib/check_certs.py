@@ -11,6 +11,7 @@ from check_certs_lib.ocsp import check_ocsp
 MAIL_PROTO = ['smtp', 'smtps', 'submission']
 
 def check_cert(url_str: str, **flags) -> str:
+    logger = logging.getLogger(__name__)
     # For fast using
     quiet = flags.get('quiet')
     b = need_bold(flags.get('need_markup'))
@@ -21,7 +22,7 @@ def check_cert(url_str: str, **flags) -> str:
     if not check_fqdn(fqdn):
         return f'Host name is invalid: {fqdn}\n'
 
-    logging.debug(f'{scheme} {fqdn} {port}')
+    logger.debug(f'{scheme} {fqdn} {port}')
 
     addresses = list()
     message = ''

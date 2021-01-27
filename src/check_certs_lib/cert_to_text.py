@@ -1,5 +1,4 @@
 import datetime
-import logging
 from pytz import UTC
 from OpenSSL import crypto
 
@@ -95,7 +94,6 @@ def cert_to_text(x509: crypto.X509, need_markup: bool = False) -> str:
     text.append(list_of_tuples('      ', x509.get_subject().get_components()))
 
     for i in range(x509.get_extension_count()):
-        logging.debug(x509.get_extension(i).get_short_name())
         if x509.get_extension(i).get_short_name() == b'subjectAltName':
             text.append(f'   {b("subjectAltName")}:')
             text.append(x509_alt_names('      ',
