@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import logging
 from os import path
 import queue
@@ -99,13 +100,27 @@ class CheckCertBot:
         self.activity_db = self.db_factory.get_db('activity')
         self.activity_db.create(db_schemas.activity_create_statement)
 
-    def user_activity(self, cmd, message):
+    def user_access(self, cmd, message) -> bool:
         res = self.users_db.select('*', f'id={message.chat_id}')
+        # A new user
         if len(res) == 0:
             self.users_db.insert('id, name, full_name, language_code, first_met, last_activity', f'"{message.chat_id}", "{message.chat.username}", "{message.chat.first_name} {message.chat.last_name}", "{message.from_user.language_code}", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
         else:
-            self.users_db.update('last_activity=CURRENT_TIMESTAMP', f'id="{message.chat_id}"')
-        self.activity_db.insert('user_id, cmd, date', f'"{message.chat_id}", "{cmd}", CURRENT_TIMESTAMP')
+            if res[0]['status'] == 'ban':
+                logging.warning(f'banned: {message.chat_id}. {cmd}.')
+                return False
+
+            # Check for flooding
+            r = self.activity_db.select('*', f'user_id={message.chat_id!r} and date={datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")!r}')
+            # Flood protect
+            if len(r) > 0:
+                self.activity_db.insert('user_id, cmd, date', f'{message.chat_id!r}, {"!"+cmd!r}, CURRENT_TIMESTAMP')
+                logging.warning(f'Flood activity: {message.chat_id} - {len(r)}. Blocked.')
+                return False
+            self.users_db.update('last_activity=CURRENT_TIMESTAMP', f'id={message.chat_id!r}')
+        # Write his activity
+        self.activity_db.insert('user_id, cmd, date', f'{message.chat_id!r}, {cmd!r}, CURRENT_TIMESTAMP')
+        return True
 
     def check_queue(self, context):
         while not remote_messages.empty():
@@ -118,20 +133,26 @@ class CheckCertBot:
         self.updater.idle()
 
     def help_cmd(self, update, context):
-        self.user_activity('/help', update.message)
+        if not self.user_access('/help', update.message):
+            context.bot.send_message(chat_id=update.message.chat_id, text='You are banned')
+            return
+
         # Remove ReplyKeyboard if it was there
         #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
         #old_message = context.bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
         context.bot.send_message(chat_id=update.message.chat_id, parse_mode='Markdown', text=help_text)
 
     def id_cmd(self, update, context):
-        self.user_activity('/id', update.message)
+        if not self.user_access('/id', update.message):
+            context.bot.send_message(chat_id=update.message.chat_id, text='You are banned')
+            return
         text = f'{update.message.chat_id}: {update.message.chat.username} {update.message.chat.first_name} {update.message.chat.last_name} {update.message.from_user.language_code}'
         context.bot.send_message(chat_id=update.message.chat_id, text=text)
 
     def list_cmd(self, update, context):
         args = context.args
-        self.user_activity('/list {args}', update.message)
+        if not self.user_access(f'/list {args}', update.message):
+            return
         res = list()
         short = False
         if len(args) > 0 and args[0] == 'short':
@@ -155,7 +176,8 @@ class CheckCertBot:
 
     def add_cmd(self, update, context):
         args = context.args
-        self.user_activity('/add {args}', update.message)
+        if not self.user_access(f'/add {args}', update.message):
+            return
         if len(args) < 1:
             context.bot.send_message(chat_id=update.message.chat_id, text='Use /add URL [days]')
             return
@@ -182,7 +204,8 @@ class CheckCertBot:
 
     def hold_cmd(self, update, context):
         args = context.args
-        self.user_activity('/hold {args}', update.message)
+        if not self.user_access(f'/hold {args}', update.message):
+            return
         if len(args) < 1:
             context.bot.send_message(chat_id=update.message.chat_id, text='Use /hold URL')
             return
@@ -195,7 +218,8 @@ class CheckCertBot:
 
     def unhold_cmd(self, update, context):
         args = context.args
-        self.user_activity('/unhold {args}', update.message)
+        if not self.user_access(f'/unhold {args}', update.message):
+            return
         if len(args) < 1:
             context.bot.send_message(chat_id=update.message.chat_id, text='Use /unhold URL')
             return
@@ -208,7 +232,8 @@ class CheckCertBot:
 
     def remove_cmd(self, update, context):
         args = context.args
-        self.user_activity(f'/remove {args}', update.message)
+        if not self.user_access(f'/remove {args}', update.message):
+            return
         if len(args) < 1:
             context.bot.send_message(chat_id=update.message.chat_id, text='Use /remove URL')
             return
@@ -220,16 +245,19 @@ class CheckCertBot:
         context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'Successfully removed: {url}')
 
     def reset_cmd(self, update, context):
-        self.user_activity('/reset', update.message)
+        if not self.user_access('/reset', update.message):
+            return
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
         context.bot.send_message(chat_id=update.message.chat_id, text='Successfully reseted')
 
     def unknown_cmd(self, update, context):
-        self.user_activity('unknown', update.message)
+        if not self.user_access('unknown', update.message):
+            return
         context.bot.send_message(chat_id=update.message.chat_id, text='Unknown command. Try /help.')
 
     def message(self, update, context):
-        self.user_activity(update.message.text, update.message)
+        if not self.user_access(update.message.text, update.message):
+            return
         error, url = parse_url(update.message.text)
         if error != '':
             context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=error)
