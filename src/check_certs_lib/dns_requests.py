@@ -65,7 +65,7 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
         i = 1
         while response.rcode() != dns.rcode.NOERROR and i < len(nameservers):
             response = dns.query.tcp(query, nameservers[i])
-            i = i + 1
+            i += 1
         # We tried all nameservers and got errors for each
         if response.rcode() != dns.rcode.NOERROR:
             if not quiet:
@@ -105,7 +105,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
           len(response.answer) != 2 and \
           i < len(nsaddr):
         response = dns.query.tcp(query, nsaddr[i])
-        i = i + 1
+        i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error(f'zone {zone} resolve error')
@@ -135,7 +135,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
           len(response.answer) < 2 and \
           i < len(nsaddr):
         response = dns.query.tcp(request, nsaddr[i])
-        i = i + 1
+        i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error(f'{dname} resolve error')
