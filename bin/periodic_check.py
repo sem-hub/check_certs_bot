@@ -51,7 +51,7 @@ def process_results(r: dict) -> NoReturn:
         logging.debug(f'Error*: {result}')
         servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',  f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
     else:
-        # It;s a first check or certificate did not changed
+        # It's a first check or certificate did not changed
         if r['cert_id'] == '0' or cert_id == r['cert_id']:
             result = 'OK'
         else:
