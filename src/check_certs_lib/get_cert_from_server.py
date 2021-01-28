@@ -1,8 +1,15 @@
 import datetime
 import socket
+import timeout_decorator
 from OpenSSL import SSL, crypto
 
 from check_certs_lib.verify_cert import verify_cert
+
+TIMEOUT = 5
+
+@timeout_decorator.timeout(TIMEOUT)
+def do_handshake_with_timeout(conn):
+    conn.do_handshake()
 
 # Return: (err, list(x509))
 def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, list):
@@ -13,12 +20,11 @@ def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -
     if ':' in addr:
         s_type = socket.AF_INET6
     s = socket.socket(s_type)
-    s.settimeout(3)
+    s.settimeout(TIMEOUT)
 
     conn = SSL.Connection(context=context, socket=s)
     try:
         conn.connect((addr, port))
-        conn.setblocking(1)
     except Exception as msg:
         return (f'{addr}: Connection error: {str(msg)}', None)
 
@@ -31,9 +37,10 @@ def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -
         s.recv(1000)
 
     try:
+        conn.setblocking(1)
         conn.set_tlsext_host_name(hostname.encode())
-        conn.do_handshake()
-    except SSL.Error as err:
+        do_handshake_with_timeout(conn)
+    except (SSL.Error, timeout_decorator.TimeoutError) as err:
         conn.close()
         return (f'{addr}: SSL do_handshake error: {str(err)}', None)
     # Get unverified certificate in binary form

@@ -7,3 +7,4 @@ pyOpenSSL
 python-telegram-bot>13.0.0
 pytz
 rpyc
+timeout_decorator       # To fight with unbreakable OpenSSL.do_handshake()
