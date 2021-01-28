@@ -13,8 +13,13 @@ MAIL_PROTO = ['smtp', 'smtps', 'submission']
 def check_cert(url_str: str, **flags) -> str:
     logger = logging.getLogger(__name__)
     # For fast using
-    quiet = flags.get('quiet')
-    b = need_bold(flags.get('need_markup'))
+    quiet = flags.get('quiet', False)
+    need_markup = flags.get('need_markup', False)
+    only_ipv4 = flags.get('only_ipv4', False)
+    only_ipv6 = flags.get('only_ipv6', False)
+    only_one = flags.get('only_one', False)
+
+    b = need_bold(need_markup)
 
     err, scheme, fqdn, port = parse_and_check_url(url_str)
     if err != '':
@@ -34,8 +39,8 @@ def check_cert(url_str: str, **flags) -> str:
             mx_host = rdata.exchange.to_text()[:-1]
             if not quiet:
                 message = message + f'  {mx_host}\n'
-            for addr in get_all_dns(rdata.exchange, flags.get('only_ipv4'),
-                    flags.get('only_ipv6'), flags.get('only_one')):
+            for addr in get_all_dns(rdata.exchange, only_ipv4,
+                                    only_ipv6, only_one):
                 addresses.append((mx_host,addr))
 
     # Only smtp protocol needs extra EHLO/STARTTLS commands
@@ -45,7 +50,7 @@ def check_cert(url_str: str, **flags) -> str:
 
     # if we don't have addresses from MX records
     if len(addresses) == 0:
-        for addr in get_all_dns(fqdn, flags.get('only_ipv4'), flags.get('only_ipv6'), flags.get('only_one')):
+        for addr in get_all_dns(fqdn, only_ipv4, only_ipv6, only_one):
             addresses.append((fqdn,addr))
 
     if len(addresses) == 0:
@@ -85,7 +90,7 @@ def check_cert(url_str: str, **flags) -> str:
             if flags.get('print_id'):
                 message = message + 'ID: %X\n' % cert.get_serial_number()
             if not quiet:
-                message = message + cert_to_text(cert, flags.get('need_markup')) + '\n'
+                message = message + cert_to_text(cert, need_markup) + '\n'
 
             # If we have bad certificate here, don't check it for matching
             if error:
