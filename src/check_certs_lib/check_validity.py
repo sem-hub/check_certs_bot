@@ -3,7 +3,7 @@ import socket
 from urllib.parse import urlparse
 
 def is_valid_fqdn(fqdn: str) -> bool:
-    if len(fqdn) > 255:
+    if fqdn == None or len(fqdn) > 255:
         return False
     if fqdn.find('.') == -1:
         return False
