@@ -21,18 +21,18 @@ def check_cert(url_str: str, **flags) -> str:
 
     b = need_bold(need_markup)
 
-    err, scheme, fqdn, port = parse_and_check_url(url_str)
+    err, proto, fqdn, port = parse_and_check_url(url_str)
     if err != '':
         return err
     if not check_fqdn(fqdn):
         return f'Host name is invalid: {fqdn}\n'
 
-    logger.debug(f'{scheme} {fqdn} {port}')
+    logger.debug(f'{proto} {fqdn} {port}')
 
     addresses = list()
     message = ''
 
-    if scheme in MAIL_PROTO:
+    if proto in MAIL_PROTO:
         if not quiet:
             message = message + f'MX records for {fqdn}:\n'
         for rdata in get_dns_request(fqdn, 'MX', quiet):
