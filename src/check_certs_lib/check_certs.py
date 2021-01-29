@@ -43,11 +43,6 @@ def check_cert(url_str: str, **flags) -> str:
                                     only_ipv6, only_one):
                 addresses.append((mx_host,addr))
 
-    # Only smtp protocol needs extra EHLO/STARTTLS commands
-    starttls = False
-    if scheme == 'smtp':
-        starttls = True
-
     # if we don't have addresses from MX records
     if len(addresses) == 0:
         for addr in get_all_dns(fqdn, only_ipv4, only_ipv6, only_one):
@@ -65,7 +60,7 @@ def check_cert(url_str: str, **flags) -> str:
         # XXX if not debug
         if not quiet:
             message = message + f'{addr[0]}: {addr[1]}\n'
-        error, chain = get_chain_from_server(addr[0], addr[1], port, starttls)
+        error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
         if error:
             message = message + f'Error: {error}\n'
             continue
@@ -124,7 +119,7 @@ def check_cert(url_str: str, **flags) -> str:
                 res = check_tlsa(fqdn, port, chain[0], quiet)
                 if res == 'OK':
                     if not quiet:
-                        message = message + 'TLSA is {b("OK")}\n'
+                        message = message + f'TLSA is {b("OK")}\n'
                 else:
                     if res == 'not found':
                         if not quiet:

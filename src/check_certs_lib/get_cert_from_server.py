@@ -12,7 +12,7 @@ def do_handshake_with_timeout(conn):
     conn.do_handshake()
 
 # Return: (err, list(x509))
-def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, list):
+def get_chain_from_server(hostname: str, addr: str, port: int, proto: str) -> (str, list):
     context = SSL.Context(method=SSL.SSLv23_METHOD)
 
     # open plain connection
@@ -29,7 +29,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -
         return (f'{addr}: Connection error: {str(msg)}', None)
 
     try:
-        if starttls:
+        if proto == 'smtp':
             # Send EHLO, STARTTLS. Ignore server answer (XXX).
             s.recv(1000)
             s.send(b'EHLO gmail.com\n')
@@ -55,8 +55,8 @@ def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -
     return (None, chain)
 
 # Return: (err, x509)
-def get_cert_from_server(hostname: str, addr: str, port: int, starttls: bool) -> (str, crypto.X509):
-    (error, chain) = get_chain_from_server(hostname, addr, port, starttls)
+def get_cert_from_server(hostname: str, addr: str, port: int, proto: str) -> (str, crypto.X509):
+    (error, chain) = get_chain_from_server(hostname, addr, port, proto)
     if error:
         return (error, None)
     return (None, chain[0])
