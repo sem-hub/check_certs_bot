@@ -7,5 +7,5 @@ def send_to_chat(chat_id:int, msg: str):
         rcon = rpyc.connect('localhost', 18861)
         rcon.root.add_message(chat_id, msg)
     except ConnectionError as error:
-        loggeer.error(f'Connection to chat server error: {str(error)}')
+        logger.error(f'Connection to chat server error: {str(error)}')
         logger.info(msg)

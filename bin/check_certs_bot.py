@@ -304,8 +304,8 @@ class CheckCertBot:
         p.start()
 
 def async_run_func(bot, chat_id, url):
-        output_text = check_cert(url, need_markup=True)
-        send_long_message(bot, chat_id, output_text)
+        error, result = check_cert(url, need_markup=True)
+        send_long_message(bot, chat_id, result+'\n'+error)
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer

@@ -28,7 +28,7 @@ def process_checking(db, dry_run, rt: tuple) -> dict:
     res['cert_id'] = r['cert_id']
     res['url'] = r['url']
     res['chat_id'] = r['chat_id']
-    res['out_text'] = check_cert(r['url'], quiet=True, print_id=True, warn_before_expired=r['warn_before_expired'], only_one=True)
+    res['error'], res['out_text'] = check_cert(r['url'], quiet=True, print_id=True, warn_before_expired=r['warn_before_expired'], only_one=True)
     if not dry_run:
         process_results(db, res)
     return res
@@ -36,7 +36,10 @@ def process_checking(db, dry_run, rt: tuple) -> dict:
 def process_results(servers_db, r: dict) -> NoReturn:
     if not r:
         return
-    result = r['out_text']
+    if r['error']:
+        result = r['error']+'\n'+r['out_text']
+    else:
+        result = r['out_text']
     if type(result) == bytes:
         result = result.decode('utf-8')
     if result[-1:] == '\n':

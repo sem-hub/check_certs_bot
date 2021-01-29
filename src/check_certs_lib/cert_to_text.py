@@ -2,6 +2,7 @@ import datetime
 from pytz import UTC
 from OpenSSL import crypto
 
+# Text markups
 def need_bold(flag: bool):
     def helper(text: str) -> str:
         if flag:

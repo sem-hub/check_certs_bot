@@ -21,12 +21,13 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> s
         m.update(dump)
         return m.digest()
 
-def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> str:
+# Return (error, result)
+def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> (str, str):
     logger = logging.getLogger(__name__)
     answer = get_tlsa_record(fqdn, port, quiet=True)
 
     if len(answer) == 0:
-        return 'not found'
+        return ('not found', '')
     result = False
     for a in answer:
         if a.usage not in [1,3]:
@@ -38,6 +39,6 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> s
         result = a.cert == tlsa
 
     if result:
-        return 'OK'
+        return ('', 'OK')
     else:
-        return 'not match'
+        return ('not match', '')

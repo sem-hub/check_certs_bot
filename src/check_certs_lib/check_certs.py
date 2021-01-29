@@ -10,7 +10,8 @@ from check_certs_lib.ocsp import check_ocsp
 
 MAIL_PROTO = ['smtp', 'smtps', 'submission']
 
-def check_cert(url_str: str, **flags) -> str:
+# Return (error, result)
+def check_cert(url_str: str, **flags) -> (str, str):
     logger = logging.getLogger(__name__)
     # For fast using
     quiet = flags.get('quiet', False)
@@ -23,13 +24,14 @@ def check_cert(url_str: str, **flags) -> str:
 
     err, proto, fqdn, port = parse_and_check_url(url_str)
     if err != '':
-        return err
+        return (err, '')
     if not check_fqdn(fqdn):
-        return f'Host name is invalid: {fqdn}\n'
+        return (f'Host name is invalid: {fqdn}\n', '')
 
     logger.debug(f'{proto} {fqdn} {port}')
 
     addresses = list()
+    error_msg = ''
     message = ''
 
     if proto in MAIL_PROTO:
@@ -49,8 +51,8 @@ def check_cert(url_str: str, **flags) -> str:
             addresses.append((fqdn,addr))
 
     if len(addresses) == 0:
-        message = message + f'No address records found for {fqdn}\n'
-        return message
+        error_msg = error_msg + f'No address records found for {fqdn}\n'
+        return (error_msg, '')
     else:
         if not quiet:
             message = message + f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
@@ -62,7 +64,7 @@ def check_cert(url_str: str, **flags) -> str:
             message = message + f'{addr[0]}: {addr[1]}\n'
         error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
         if error:
-            message = message + f'Error: {error}\n'
+            error_msg = error_msg + f'Error: {error}\n'
             continue
         # XXX debug only
         if not quiet:
@@ -78,7 +80,7 @@ def check_cert(url_str: str, **flags) -> str:
                 message = message + 'Certificate is the same\n'
         else:
             if cert.get_serial_number() != cert0_id:
-                message = message + 'Certificates are differ\n'
+                error_msg = error_msg + 'Certificates are differ\n'
 
             error = verify_cert(chain)
 
@@ -89,25 +91,25 @@ def check_cert(url_str: str, **flags) -> str:
 
             # If we have bad certificate here, don't check it for matching
             if error:
-                message = message + f'Certificate error: {error}\n'
+                error_msg = error_msg + f'Certificate error: {error}\n'
                 continue
             else:
                 if not match_domain(fqdn, cert):
                     # XXX print domain list from certificate if verbose or debug
-                    message = message + 'Certificate error: Host name ' + \
+                    error_msg = error_msg + 'Certificate error: Host name ' + \
                             'mismatched with any domain in certificate\n'
                     continue
                 else:
                     days_before_expired = get_days_before_expired(cert)
                     if flags.get('warn_before_expired') and \
                         days_before_expired <= flags['warn_before_expired']:
-                            message = message + 'Certificate fill expired ' + \
+                            error_msg = error_msg + 'Certificate fill expired ' + \
                                 f'after {days_before_expired} days\n'
                     else:
                         # ocspcheck can't check only one certificate. It needs a chain
                         if len(chain) > 1 and not flags.get('no_ocsp'):
-                            result = check_ocsp(chain)
-                            if result != 'GOOD' or not quiet:
+                            error, result = check_ocsp(chain)
+                            if not error and not quiet:
                                 message = message + f'OCSP check result: {b(result)}\n'
                             if result != 'GOOD':
                                 continue
@@ -116,15 +118,15 @@ def check_cert(url_str: str, **flags) -> str:
             # only good certificate here
             # Run TLSA check if we have TLSA record
             if not flags.get('no_tlsa'):
-                res = check_tlsa(fqdn, port, chain[0], quiet)
-                if res == 'OK':
+                error, result = check_tlsa(fqdn, port, chain[0], quiet)
+                if not error:
                     if not quiet:
                         message = message + f'TLSA is {b("OK")}\n'
                 else:
-                    if res == 'not found':
+                    if error == 'not found':
                         if not quiet:
-                            message = message + f'TLSA is not found. Ignored\n'
+                            error_msg = error_msg + f'TLSA is not found. Ignored\n'
                     else:
-                        message = message + f'TLSA is {b(res)}\n'
+                        error_msg = error_msg + f'TLSA is {b(res)}\n'
 
-    return message
+    return (error_msg, message)

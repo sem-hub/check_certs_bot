@@ -8,6 +8,7 @@ def check_fqdn(fqdn: str) -> bool:
         return False
     return True
 
+# Return empty list if not found any
 def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False, only_first: bool = False) -> list:
     # fqdn must be checked with check_fqdn() before
     dname = dns.name.from_text(fqdn)

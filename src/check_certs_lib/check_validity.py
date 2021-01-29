@@ -10,7 +10,7 @@ def is_valid_fqdn(fqdn: str) -> bool:
     allowed = re.compile(r'(?!-)[A-Z\d-]{1,63}(?<!-)$', re.IGNORECASE)
     return all(allowed.match(x) for x in fqdn.split('.'))
 
-# Return: (error, scheme, fqdn, port)
+# Return: (error, protocol, fqdn, port)
 def parse_and_check_url(url_str: str) -> (str, str, str, str):
     if '://' not in url_str:
         return (f'URL error: {url_str}\n', '', '', '')
