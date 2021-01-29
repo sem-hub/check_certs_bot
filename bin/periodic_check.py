@@ -11,8 +11,13 @@ from check_certs_lib.db import DB_factory
 from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 from check_certs_lib.send_to_chat import send_to_chat
 
-def proc_exec(rt: tuple) -> dict:
-    global dry_run
+def closure(db, dry_run: bool):
+    global helper       # it's a dirty hack to prevent "Can't picle local object" error in multiprocessing module
+    def helper(fields: tuple):
+        return process_checking(db, dry_run, fields)
+    return helper
+
+def process_checking(db, dry_run, rt: tuple) -> dict:
     r = rt[1]
     logging.debug(f'{r["url"]}')
     if r['status'] == 'HOLD':
@@ -25,12 +30,10 @@ def proc_exec(rt: tuple) -> dict:
     res['chat_id'] = r['chat_id']
     res['out_text'] = check_cert(r['url'], quiet=True, print_id=True, warn_before_expired=r['warn_before_expired'], only_one=True)
     if not dry_run:
-        process_results(res)
+        process_results(db, res)
     return res
 
-def process_results(r: dict) -> NoReturn:
-    global servers_db
-
+def process_results(servers_db, r: dict) -> NoReturn:
     if not r:
         return
     result = r['out_text']
@@ -73,12 +76,11 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    global servers_db
-    global dry_run
-    dry_run = args.dry_run
     db_factory = DB_factory()
     servers_db = db_factory.get_db('servers')
     res = servers_db.select('*')
+
+    proc_exec = closure(servers_db, args.dry_run)
     with Pool(processes=args.proc_num) as pool:
         pres = pool.map(proc_exec, enumerate(res))
 
