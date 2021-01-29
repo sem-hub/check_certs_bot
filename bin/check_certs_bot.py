@@ -51,10 +51,22 @@ def parse_url(url_str: str):
     err, scheme, hostname, port = parse_and_check_url(url)
     return (err, f'{scheme}://{hostname}:{port}')
 
+def send_message_to_user(bot, **kwargs):
+    success = False
+    attemps = 0
+    while not success and attemps < 5:
+        try:
+            bot.send_message(**kwargs)
+            success = True
+        except Exception as e:
+            logging.error(str(e))
+        attemps += 1
+
 def send_long_message(bot, chat_id, text: str):
     max_len = telegram.constants.MAX_MESSAGE_LENGTH
     for i in range(0, len(text), max_len):
-        bot.send_message(chat_id=chat_id, parse_mode='HTML', disable_web_page_preview=1,
+        send_message_to_user(bot, chat_id=chat_id, parse_mode='HTML',
+                disable_web_page_preview=1,
                 text=text[i:i+max_len])
 
 class RPyCService(rpyc.Service):
@@ -132,7 +144,7 @@ class CheckCertBot:
     def check_queue(self, context):
         while not remote_messages.empty():
             chat_id, msg = remote_messages.get()
-            context.bot.send_message(chat_id=chat_id, disable_web_page_preview=1, text=msg)
+            send_message_to_user(context.bot, chat_id=chat_id, disable_web_page_preview=1, text=msg)
             remote_messages.task_done()
 
     def start(self):
@@ -141,22 +153,22 @@ class CheckCertBot:
 
     def help_cmd(self, update, context):
         if not self.user_access('/help', update.message):
-            context.bot.send_message(chat_id=update.message.chat_id,
+            bot.send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         text='You are banned')
             return
 
         # Remove ReplyKeyboard if it was there
         #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
         #old_message = context.bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     parse_mode='Markdown', text=help_text)
 
     def id_cmd(self, update, context):
         if not self.user_access('/id', update.message):
-            context.bot.send_message(chat_id=update.message.chat_id, text='You are banned')
+            send_message_to_user(context.bot, chat_id=update.message.chat_id, text='You are banned')
             return
         text = f'{update.message.chat_id}: {update.message.chat.username} {update.message.chat.first_name} {update.message.chat.last_name} {update.message.from_user.language_code}'
-        context.bot.send_message(chat_id=update.message.chat_id, text=text)
+        send_message_to_user(context.bot, chat_id=update.message.chat_id, text=text)
 
     def list_cmd(self, update, context):
         args = context.args
@@ -188,12 +200,12 @@ class CheckCertBot:
         if not self.user_access(f'/add {args}', update.message):
             return
         if len(args) < 1:
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         text='Use /add URL [days]')
             return
         error, url = parse_url(args[0])
         if error != '':
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
@@ -203,17 +215,17 @@ class CheckCertBot:
             if args[1].isdigit():
                 days = int(args[1])
             else:
-                context.bot.send_message(chat_id=update.message.chat_id,
+                send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                             text='days must be integer')
                 return
         # Check for duplicates
         res = self.servers_db.select('url', f'url="{url}" AND chat_id="{str(update.message.chat_id)}"')
         if len(res) > 0:
-            context.bot.send_message(chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'{url} already exists')
+            send_message_to_user(context.bot, chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'{url} already exists')
             return
         # datetime('Never', 'localtime') == NoneType. So I use 0000-01-01 00:00:00 as 'never' value.
         self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Successfully added: {url}')
 
@@ -222,16 +234,16 @@ class CheckCertBot:
         if not self.user_access(f'/hold {args}', update.message):
             return
         if len(args) < 1:
-            context.bot.send_message(chat_id=update.message.chat_id, text='Use /hold URL')
+            send_message_to_user(context.bot, chat_id=update.message.chat_id, text='Use /hold URL')
             return
         error, url = parse_url(args[0])
         if error != '':
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
         self.servers_db.update('status="HOLD"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Hold checking for: {url}')
 
@@ -240,18 +252,18 @@ class CheckCertBot:
         if not self.user_access(f'/unhold {args}', update.message):
             return
         if len(args) < 1:
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         text='Use /unhold URL')
             return
         (error, url) = parse_url(args[0])
         if error != '':
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
         self.servers_db.update('status="None"',
                             f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Unhold checking for: {url}')
 
@@ -260,17 +272,17 @@ class CheckCertBot:
         if not self.user_access(f'/remove {args}', update.message):
             return
         if len(args) < 1:
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         text='Use /remove URL')
             return
         error, url = parse_url(args[0])
         if error != '':
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
         self.servers_db.delete(f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Successfully removed: {url}')
 
@@ -278,13 +290,13 @@ class CheckCertBot:
         if not self.user_access('/reset', update.message):
             return
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     text='Successfully reseted')
 
     def unknown_cmd(self, update, context):
         if not self.user_access('unknown', update.message):
             return
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     text='Unknown command. Try /help.')
 
     def message(self, update, context):
@@ -292,11 +304,11 @@ class CheckCertBot:
             return
         error, url = parse_url(update.message.text)
         if error != '':
-            context.bot.send_message(chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         disable_web_page_preview=1, text=error)
             return
 
-        context.bot.send_message(chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Checking certificate for: {url}')
         p = Process(target=async_run_func, args=(context.bot,
