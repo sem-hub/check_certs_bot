@@ -185,7 +185,10 @@ class CheckCertBot:
 
         output = list()
         for r in res:
-            output.append('|'.join([str(elem) for elem in r.values()]))
+            line = '|'.join([str(elem) for elem in r.values()])
+            # Strip start/stop tag characters
+            line = line.replace('<', '').replace('>', '')
+            output.append(line)
         if len(output) == 0:
             output = ['Empty']
         else:

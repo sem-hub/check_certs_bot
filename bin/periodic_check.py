@@ -37,13 +37,12 @@ def process_results(servers_db, r: dict) -> NoReturn:
     if not r:
         return
     if r['error']:
-        result = r['error']+'\n'+r['out_text']
+        result = r['out_text']+r['error']
     else:
         result = r['out_text']
     if type(result) == bytes:
         result = result.decode('utf-8')
-    if result[-1:] == '\n':
-        result = result[:len(result)-1]
+    result = result.strip('\n')
     m = re.search('ID: ([0-9A-Z]+)\n?', result)
     if m == None:
         send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
