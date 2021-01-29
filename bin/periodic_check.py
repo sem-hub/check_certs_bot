@@ -11,7 +11,7 @@ from check_certs_lib.db import DB_factory
 from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 from check_certs_lib.send_to_chat import send_to_chat
 
-def closure(db, dry_run: bool):
+def check_process_closure(db, dry_run: bool):
     global helper       # it's a dirty hack to prevent "Can't picle local object" error in multiprocessing module
     def helper(fields: tuple):
         return process_checking(db, dry_run, fields)
@@ -80,7 +80,7 @@ def main():
     servers_db = db_factory.get_db('servers')
     res = servers_db.select('*')
 
-    proc_exec = closure(servers_db, args.dry_run)
+    proc_exec = check_process_closure(servers_db, args.dry_run)
     with Pool(processes=args.proc_num) as pool:
         pres = pool.map(proc_exec, enumerate(res))
 
