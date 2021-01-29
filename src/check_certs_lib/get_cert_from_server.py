@@ -28,13 +28,16 @@ def get_chain_from_server(hostname: str, addr: str, port: int, starttls: bool) -
     except Exception as msg:
         return (f'{addr}: Connection error: {str(msg)}', None)
 
-    if starttls:
-        # Send EHLO, STARTTLS. Ignore server answer (XXX).
-        s.recv(1000)
-        s.send(b'EHLO gmail.com\n')
-        s.recv(1000)
-        s.send(b'STARTTLS\n')
-        s.recv(1000)
+    try:
+        if starttls:
+            # Send EHLO, STARTTLS. Ignore server answer (XXX).
+            s.recv(1000)
+            s.send(b'EHLO gmail.com\n')
+            s.recv(1000)
+            s.send(b'STARTTLS\n')
+            s.recv(1000)
+    except Exception as err:
+        return (f'send/recv error: {str(err)}', None)
 
     try:
         conn.setblocking(1)
