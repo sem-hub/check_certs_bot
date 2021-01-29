@@ -46,5 +46,9 @@ crontab -e example:
 3 5 * * * /usr/local/bin/periodic_check.py
 ```
 
+generate_tlsa.py - Generate TLSA records for DNS server (bind format).
+It takes list of URLs from file or stdin. If argument is URL it will make only
+one TLS RR for it.
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
