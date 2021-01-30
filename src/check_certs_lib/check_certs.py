@@ -100,7 +100,7 @@ def check_cert(url_str: str, **flags) -> (str, str):
                     days_before_expired = get_days_before_expired(cert)
                     if flags.get('warn_before_expired') and \
                         days_before_expired <= flags['warn_before_expired']:
-                            error_msg = error_msg + 'Certificate fill expired ' + \
+                            error_msg = error_msg + 'Certificate will expired ' + \
                                                     f'after {days_before_expired} days\n'
                     else:
                         # ocspcheck can't check only one certificate. It needs a chain
