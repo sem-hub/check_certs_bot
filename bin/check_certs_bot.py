@@ -315,12 +315,19 @@ class CheckCertBot:
                                     disable_web_page_preview=1,
                                     text=f'Checking certificate for: {url}')
         p = Process(target=async_run_func, args=(context.bot,
-                                                    update.message.chat_id, url))
+                                                    update.message.chat_id, self.servers_db, url))
         p.start()
 
-def async_run_func(bot, chat_id, url):
+def async_run_func(bot, chat_id, db, url):
         error, result = check_cert(url, need_markup=True)
         send_long_message(bot, chat_id, result+error)
+        # Write result to DB if we have an entry. Don't use chat_id here, update for all users if have.
+        res = db.select('*', f'url={url!r}')
+        if len(res) > 0:
+            if error:
+                db.update(f'last_checked=CURRENT_TIMESTAMP, status={error!r}', f'url={url!r} AND chat_id={chat_id!r}')
+            else:
+                db.update('last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="OK"', f'url={url!r} AND chat_id={chat_id!r}')
 
 if __name__ == '__main__':
     from rpyc.utils.server import ThreadedServer
