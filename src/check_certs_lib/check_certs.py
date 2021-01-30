@@ -94,14 +94,14 @@ def check_cert(url_str: str, **flags) -> (str, str):
             else:
                 if not match_domain(fqdn, cert):
                     error_msg = error_msg + 'Certificate error: Host name ' + \
-                            'mismatched with any domain in certificate\n'
+                                            'mismatched with any domain in certificate\n'
                     continue
                 else:
                     days_before_expired = get_days_before_expired(cert)
                     if flags.get('warn_before_expired') and \
                         days_before_expired <= flags['warn_before_expired']:
                             error_msg = error_msg + 'Certificate fill expired ' + \
-                                f'after {days_before_expired} days\n'
+                                                    f'after {days_before_expired} days\n'
                     else:
                         # ocspcheck can't check only one certificate. It needs a chain
                         if len(chain) > 1 and not flags.get('no_ocsp'):
