@@ -5,7 +5,7 @@ import re
 from pytz import UTC
 from OpenSSL import crypto
 
-from check_certs_lib.cert_to_text import decode_generalized_time
+from check_certs_lib.cert_to_text import decode_generalized_time, strip_subject
 
 def get_days_before_expired(cert: crypto.X509) -> int:
     expired_dt = decode_generalized_time(cert.get_notAfter())
@@ -69,6 +69,6 @@ def verify_cert(certs_to_check) -> str:
     try:
         store_ctx.verify_certificate()
     except crypto.X509StoreContextError as err:
-        error = err.args[0][2]+': '+str(cert.get_subject())
+        error = err.args[0][2]+': '+strip_subject((cert.get_subject()))
 
     return error

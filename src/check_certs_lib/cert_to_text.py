@@ -43,6 +43,11 @@ def need_pre(flag: bool):
             return text
     return helper
 
+def strip_subject(subj) -> str:
+    res = str(subj)
+    res = res.replace('<', '')
+    return res.replace('>', '')
+
 def decode_generalized_time(gt: bytes) -> str:
     return datetime.datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
 
