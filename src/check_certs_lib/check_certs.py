@@ -59,14 +59,12 @@ def check_cert(url_str: str, **flags) -> (str, str):
 
     cert0_id = 0
     for addr in addresses:
-        # XXX if not debug
         if not quiet:
             message = message + f'{addr[0]}: {addr[1]}\n'
         error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
         if error:
             error_msg = error_msg + f'Error: {error}\n'
             continue
-        # XXX debug only
         if not quiet:
             message = message + f'Got {len(chain)} certificates in chain\n'
         cert = chain[0]
@@ -95,7 +93,6 @@ def check_cert(url_str: str, **flags) -> (str, str):
                 continue
             else:
                 if not match_domain(fqdn, cert):
-                    # XXX print domain list from certificate if verbose or debug
                     error_msg = error_msg + 'Certificate error: Host name ' + \
                             'mismatched with any domain in certificate\n'
                     continue

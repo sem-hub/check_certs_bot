@@ -62,10 +62,10 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
     for l in dlevel:
         sdomain = l + '.' + sdomain
         query = dns.message.make_query(sdomain, dns.rdatatype.NS)
-        response = dns.query.tcp(query, nameservers[0])
+        response = dns.query.udp(query, nameservers[0])
         i = 1
         while response.rcode() != dns.rcode.NOERROR and i < len(nameservers):
-            response = dns.query.tcp(query, nameservers[i])
+            response = dns.query.udp(query, nameservers[i])
             i += 1
         # We tried all nameservers and got errors for each
         if response.rcode() != dns.rcode.NOERROR:
@@ -99,13 +99,13 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     # Get DNSKEY for zone
     request = dns.message.make_query(zone, dns.rdatatype.DNSKEY, want_dnssec=True)
     nsaddr = ns_list[zone]
-    response = dns.query.tcp(request, nsaddr[0])
+    response = dns.query.udp(request, nsaddr[0])
     i = 1
     # Try all servers if any error occured
     while response.rcode() != dns.rcode.NOERROR and \
           len(response.answer) != 2 and \
           i < len(nsaddr):
-        response = dns.query.tcp(query, nsaddr[i])
+        response = dns.query.udp(query, nsaddr[i])
         i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
@@ -129,13 +129,13 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
 
     name = dns.name.from_text(dname)
     request = dns.message.make_query(name, rtype, want_dnssec=True)
-    response = dns.query.tcp(request, nsaddr[0])
+    response = dns.query.udp(request, nsaddr[0])
     i = 1
     # Try all servers if any error occured
     while response.rcode() != dns.rcode.NOERROR and \
           len(response.answer) < 2 and \
           i < len(nsaddr):
-        response = dns.query.tcp(request, nsaddr[i])
+        response = dns.query.udp(request, nsaddr[i])
         i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:

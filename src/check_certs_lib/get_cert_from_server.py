@@ -29,7 +29,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str) -> (s
         return (f'{addr}: Connection error: {str(msg)}', None)
 
     try:
-        # Send extracommands if required by proto. Ignore server answer (XXX).
+        # Send extracommands if required by proto. Ignore server answer.
         if proto == 'smtp':
             s.recv(500)
             s.send(b'EHLO gmail.com\r\n')

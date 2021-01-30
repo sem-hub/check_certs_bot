@@ -62,7 +62,7 @@ def verify_cert(certs_to_check) -> str:
     for ca in pem.parse(raw_ca):
         store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM, str(ca)))
 
-# XXX
+# XXX Need we very strict checking flags?
 #    store.set_flags(crypto.X509StoreFlags.X509_STRICT |
 #                        crypto.X509StoreFlags.CB_ISSUER_CHECK)
     store_ctx = crypto.X509StoreContext(store, cert)
