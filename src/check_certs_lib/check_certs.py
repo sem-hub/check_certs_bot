@@ -105,6 +105,7 @@ def check_cert(url_str: str, **flags) -> (str, str):
                     else:
                         # ocspcheck can't check only one certificate. It needs a chain
                         if len(chain) > 1 and not flags.get('no_ocsp'):
+                            logger.debug('check OCSP')
                             error, result = check_ocsp(chain)
                             if not error and not quiet:
                                 message = message + f'OCSP check result: {b(result)}\n'
@@ -115,6 +116,7 @@ def check_cert(url_str: str, **flags) -> (str, str):
             # only good certificate here
             # Run TLSA check if we have TLSA record
             if not flags.get('no_tlsa'):
+                logger.debug('check TLSA')
                 error, result = check_tlsa(fqdn, port, chain[0], quiet)
                 if not error:
                     if not quiet:
