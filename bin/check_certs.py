@@ -48,7 +48,7 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.DEBUG)
         add_filter_to_all_handlers(Blacklist('urllib3'))
     else:
-        logging.basicConfig(format='%(message)s', level=logging.INFO)
+        logging.basicConfig(level=logging.INFO)
 
     if '://' not in url:
         url = 'https://' + url
