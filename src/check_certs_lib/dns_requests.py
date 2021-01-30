@@ -1,6 +1,9 @@
 import dns.resolver
 import logging
 
+# timeout for dns queries
+TIMEOUT=5
+
 def check_fqdn(fqdn: str) -> bool:
     try:
         dname = dns.name.from_text(fqdn)
@@ -32,6 +35,7 @@ def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False, onl
 def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
     logger = logging.getLogger(__name__)
     result = list()
+    answers = None
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
@@ -61,11 +65,21 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
     zone = ''
     for l in dlevel:
         sdomain = l + '.' + sdomain
+        logger.debug(sdomain)
         query = dns.message.make_query(sdomain, dns.rdatatype.NS)
-        response = dns.query.udp(query, nameservers[0])
+        response = None
+        try:
+            response = dns.query.udp(query, nameservers[0], timeout=TIMEOUT)
+        except Exception as e:
+            logger.error(str(e))
+            break
         i = 1
         while response.rcode() != dns.rcode.NOERROR and i < len(nameservers):
-            response = dns.query.udp(query, nameservers[i])
+            try:
+                response = dns.query.udp(query, nameservers[i], timeout=TIMEOUT)
+            except Exception as e:
+                logger.error(str(e))
+                break
             i += 1
         # We tried all nameservers and got errors for each
         if response.rcode() != dns.rcode.NOERROR:
@@ -99,14 +113,23 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     # Get DNSKEY for zone
     request = dns.message.make_query(zone, dns.rdatatype.DNSKEY, want_dnssec=True)
     nsaddr = ns_list[zone]
-    response = dns.query.udp(request, nsaddr[0])
+    response = None
+    try:
+        response = dns.query.udp(request, nsaddr[0], timeout=TIMEOUT)
+    except Exception as e:
+        logger.error(str(e))
+        return list()
     i = 1
     # Try all servers if any error occured
     while response.rcode() != dns.rcode.NOERROR and \
           len(response.answer) != 2 and \
           i < len(nsaddr):
-        response = dns.query.udp(query, nsaddr[i])
-        i += 1
+              try:
+                  response = dns.query.udp(query, nsaddr[i], timeout=TIMEOUT)
+              except Exception as e:
+                  logger.error(str(e))
+                  break
+              i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error(f'zone {zone} resolve error')
@@ -129,7 +152,12 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
 
     name = dns.name.from_text(dname)
     request = dns.message.make_query(name, rtype, want_dnssec=True)
-    response = dns.query.udp(request, nsaddr[0])
+    response = None
+    try:
+        response = dns.query.udp(request, nsaddr[0], timeout=TIMEOUT)
+    except Exception as e:
+        logger.debug(str(e))
+        return list()
     i = 1
     # Try all servers if any error occured
     while response.rcode() != dns.rcode.NOERROR and \
