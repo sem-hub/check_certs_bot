@@ -30,6 +30,9 @@ A bot for checking HTTP servers certificates.
 Enter:
     \\[_protocol_://]_hostname_\\[:_port_] \\[no-tlsa] \\[no-ocsp]
 Default protocol and port is https(443)
+no-tlsa, no-ocsp flags dissallow TLSA, OCSP checks correspondly.
+Example:
+    *www.google.ru* will check *https://www.google.ru:443*
 
 or a command:
 /help   - show this help message.
