@@ -102,7 +102,6 @@ def cert_to_text(x509: crypto.X509, need_markup: bool = False) -> str:
     for i in range(x509.get_extension_count()):
         if x509.get_extension(i).get_short_name() == b'subjectAltName':
             text.append(f'   {b("subjectAltName")}:')
-            text.append(x509_alt_names('      ',
-                        x509.get_extension(i)._subjectAltNameString()))
+            text.append(x509_alt_names('      ', str(x509.get_extension(i))))
 
     return '\n'.join(map(str, text))
