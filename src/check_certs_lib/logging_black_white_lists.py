@@ -2,7 +2,6 @@ import logging
 
 class Whitelist(logging.Filter):
     def __init__(self, *whitelist):
-        super().__init__(self)
         self.whitelist = [logging.Filter(name) for name in whitelist]
 
     def filter(self, record):
@@ -10,7 +9,6 @@ class Whitelist(logging.Filter):
 
 class Blacklist(logging.Filter):
     def __init__(self, *blacklist):
-        super().__init__(self)
         self.blacklist = [logging.Filter(name) for name in blacklist]
 
     def filter(self, record):
