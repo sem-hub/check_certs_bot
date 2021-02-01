@@ -38,7 +38,7 @@ class DB:
         cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
         return cur.fetchall()
     def insert(self, fields: str, values: str) -> NoReturn:
-        if fields == None or fields == '':
+        if fields in (None, ''):
             self.logger.debug(f'INSERT INTO {self.table} VALUES ({values})')
             cur = self.con.cursor()
             cur.execute(f'INSERT INTO {self.table} VALUES ({values})')

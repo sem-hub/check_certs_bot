@@ -1,18 +1,19 @@
-import dns.resolver
 import logging
+import dns.resolver
 
 # timeout for dns queries
 TIMEOUT=5
 
 def check_fqdn(fqdn: str) -> bool:
     try:
-        dname = dns.name.from_text(fqdn)
-    except EmptyLabel:
+        _ = dns.name.from_text(fqdn)
+    except:
         return False
     return True
 
 # Return empty list if not found any
-def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False, only_first: bool = False) -> list:
+def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False,
+        only_first: bool = False) -> list:
     # fqdn must be checked with check_fqdn() before
     dname = dns.name.from_text(fqdn)
 
@@ -62,7 +63,6 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
 
     authority = dict()
     sdomain = ''
-    zone = ''
     for l in dlevel:
         sdomain = l + '.' + sdomain
         logger.debug(sdomain)
@@ -124,12 +124,12 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     while response.rcode() != dns.rcode.NOERROR and \
           len(response.answer) != 2 and \
           i < len(nsaddr):
-              try:
-                  response = dns.query.udp(query, nsaddr[i], timeout=TIMEOUT)
-              except Exception as e:
-                  logger.error(str(e))
-                  break
-              i += 1
+        try:
+            response = dns.query.udp(query, nsaddr[i], timeout=TIMEOUT)
+        except Exception as e:
+            logger.error(str(e))
+            break
+        i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error(f'zone {zone} resolve error')
@@ -152,7 +152,6 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
 
     name = dns.name.from_text(dname)
     request = dns.message.make_query(name, rtype, want_dnssec=True)
-    response = None
     try:
         response = dns.query.udp(request, nsaddr[0], timeout=TIMEOUT)
     except Exception as e:

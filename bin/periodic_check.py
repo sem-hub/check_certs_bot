@@ -28,7 +28,12 @@ def process_checking(db, dry_run, rt: tuple) -> dict:
     res['cert_id'] = r['cert_id']
     res['url'] = r['url']
     res['chat_id'] = r['chat_id']
-    res['error'], res['out_text'] = check_cert(r['url'], quiet=True, print_id=True, warn_before_expired=r['warn_before_expired'], only_one=True)
+    res['error'], res['out_text'] = check_cert(
+            r['url'],
+            quiet=True,
+            print_id=True,
+            warn_before_expired=r['warn_before_expired'],
+            only_one=True)
     if not dry_run:
         process_results(db, res)
     return res
@@ -44,17 +49,19 @@ def process_results(servers_db, r: dict) -> NoReturn:
         result = result.decode('utf-8')
     result = result.strip('\n')
     m = re.search('ID: ([0-9A-Z]+)\n?', result)
-    if m == None:
+    if m is None:
         send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
         logging.debug(f'Error: |{result}|')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}', f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}',
+                f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
         return
     cert_id = m.group(1)
     result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
     if result != '':
         send_to_chat(r['chat_id'], f'{r["url"]} check certificate error:\n{result}')
         logging.debug(f'Error*: {result}')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',  f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',
+                f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
     else:
         # It's a first check or certificate did not changed
         if r['cert_id'] == '0' or cert_id == r['cert_id']:
@@ -63,13 +70,16 @@ def process_results(servers_db, r: dict) -> NoReturn:
             result = 'Certificate was changed'
             send_to_chat(r['chat_id'], f'{r["url"]} check certificate:\n{result}')
         logging.debug(f'{result}')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',  f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
+        servers_db.update(
+                f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',
+                f'url={r["url"]!r} AND chat_id={r["chat_id"]!r}')
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--dry-run', action='store_true')
-    parser.add_argument('--proc-num', nargs='?', type=int, default=5, help='run simultaneous processes')
+    parser.add_argument('--proc-num', nargs='?', type=int, default=5,
+            help='run simultaneous processes')
     args = parser.parse_args()
 
     if args.debug:
@@ -84,7 +94,7 @@ def main():
 
     proc_exec = check_process_closure(servers_db, args.dry_run)
     with Pool(processes=args.proc_num) as pool:
-        pres = pool.map(proc_exec, enumerate(res))
+        pool.map(proc_exec, enumerate(res))
 
 if __name__ == '__main__':
     main()

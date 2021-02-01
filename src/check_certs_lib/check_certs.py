@@ -22,9 +22,9 @@ def check_cert(url_str: str, **flags) -> (str, str):
 
     b = need_bold(need_markup)
 
-    err, proto, fqdn, port = parse_and_check_url(url_str)
-    if err != '':
-        return (err, '')
+    error, proto, fqdn, port = parse_and_check_url(url_str)
+    if error != '':
+        return (error, '')
     if not check_fqdn(fqdn):
         return (f'Host name is invalid: {fqdn}\n', '')
 
@@ -53,9 +53,8 @@ def check_cert(url_str: str, **flags) -> (str, str):
     if len(addresses) == 0:
         error_msg = error_msg + f'No address records found for {fqdn}\n'
         return (error_msg, '')
-    else:
-        if not quiet:
-            message = message + f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
+    if not quiet:
+        message = message + f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
 
     cert0_id = 0
     for addr in addresses:
@@ -91,28 +90,26 @@ def check_cert(url_str: str, **flags) -> (str, str):
             if error:
                 error_msg = error_msg + f'Certificate error: {error}\n'
                 continue
+            if not match_domain(fqdn, cert):
+                error_msg = error_msg + 'Certificate error: Host name ' + \
+                                        'mismatched with any domain in certificate\n'
+                continue
+            days_before_expired = get_days_before_expired(cert)
+            if flags.get('warn_before_expired') and \
+                days_before_expired <= flags['warn_before_expired']:
+                error_msg = error_msg + 'Certificate will expired ' + \
+                                        f'after {days_before_expired} days\n'
             else:
-                if not match_domain(fqdn, cert):
-                    error_msg = error_msg + 'Certificate error: Host name ' + \
-                                            'mismatched with any domain in certificate\n'
-                    continue
-                else:
-                    days_before_expired = get_days_before_expired(cert)
-                    if flags.get('warn_before_expired') and \
-                        days_before_expired <= flags['warn_before_expired']:
-                            error_msg = error_msg + 'Certificate will expired ' + \
-                                                    f'after {days_before_expired} days\n'
-                    else:
-                        # ocspcheck can't check only one certificate. It needs a chain
-                        if len(chain) > 1 and not flags.get('no_ocsp'):
-                            logger.debug('check OCSP')
-                            error, result = check_ocsp(chain)
-                            if not error and not quiet:
-                                message = message + f'OCSP check result: {b(result)}\n'
-                            if result != 'GOOD':
-                                continue
-                        if not quiet:
-                            message = message + 'Certificate is good\n'
+                # ocspcheck can't check only one certificate. It needs a chain
+                if len(chain) > 1 and not flags.get('no_ocsp'):
+                    logger.debug('check OCSP')
+                    error, result = check_ocsp(chain)
+                    if not error and not quiet:
+                        message = message + f'OCSP check result: {b(result)}\n'
+                    if result != 'GOOD':
+                        continue
+                if not quiet:
+                    message = message + 'Certificate is good\n'
             # only good certificate here
             # Run TLSA check if we have TLSA record
             if not flags.get('no_tlsa'):
@@ -124,8 +121,8 @@ def check_cert(url_str: str, **flags) -> (str, str):
                 else:
                     if error == 'not found':
                         if not quiet:
-                            error_msg = error_msg + f'TLSA is not found. Ignored\n'
+                            error_msg = error_msg + 'TLSA is not found. Ignored\n'
                     else:
-                        error_msg = error_msg + f'TLSA is {b(res)}\n'
+                        error_msg = error_msg + f'TLSA is {b(result)}\n'
 
     return (error_msg, message)

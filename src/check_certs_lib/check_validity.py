@@ -3,7 +3,7 @@ import socket
 from urllib.parse import urlparse
 
 def is_valid_fqdn(fqdn: str) -> bool:
-    if fqdn == None or len(fqdn) > 255:
+    if fqdn is None or len(fqdn) > 255:
         return False
     if fqdn.find('.') == -1:
         return False
@@ -22,7 +22,7 @@ def parse_and_check_url(url_str: str) -> (str, str, str, str):
         port = url.port
     except ValueError:
         return (f'port number error: {url_str}\n', '', '', '')
-    if port == None:
+    if port is None:
         try:
             port = socket.getservbyname(scheme, 'tcp')
         except OSError:
@@ -34,6 +34,6 @@ def parse_and_check_url(url_str: str) -> (str, str, str, str):
         return (f'URL parse error: {url_str}\n', '', '', '')
 
     if not is_valid_fqdn(fqdn):
-        return (f'Hostname parse error\n', '', '', '')
+        return (f'Hostname parse error: {fqdn}\n', '', '', '')
 
     return ('', scheme, fqdn, port)

@@ -6,11 +6,11 @@ import logging
 from multiprocessing import Process
 from os import path
 import queue
+import threading
 import rpyc
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import threading
-from urllib.parse import urlsplit
+from rpyc.utils.server import ThreadedServer
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
@@ -22,7 +22,9 @@ TOKEN_FILE = '/var/spool/check_certs/TOKEN'
 # For running check_certs.py
 prog_dir = path.dirname(path.abspath(__file__))
 
-help_text='''
+remote_messages = queue.Queue()
+
+HELP_TEXT='''
 A bot for checking HTTP servers certificates.
 
 Enter:
@@ -73,6 +75,12 @@ class RPyCService(rpyc.Service):
     def exposed_add_message(self, chat_id, msg):
         remote_messages.put([chat_id, msg])
 
+def check_queue(context):
+    while not remote_messages.empty():
+        chat_id, msg = remote_messages.get()
+        send_message_to_user(context.bot, chat_id=chat_id, disable_web_page_preview=1, text=msg)
+        remote_messages.task_done()
+
 class CheckCertBot:
     def __init__(self, bot_token):
         self.updater = Updater(token=bot_token)
@@ -109,7 +117,7 @@ class CheckCertBot:
         dispatcher.add_handler(message_filter_handler)
 
         # Run job every 10 seconds
-        queue_job = job_queue.run_repeating(self.check_queue, interval=10, first=10)
+        job_queue.run_repeating(check_queue, interval=10, first=10)
 
         self.db_factory = DB_factory()
         self.servers_db = self.db_factory.get_db('servers')
@@ -123,29 +131,27 @@ class CheckCertBot:
         res = self.users_db.select('*', f'id={message.chat_id}')
         # A new user
         if len(res) == 0:
-            self.users_db.insert('id, name, full_name, language_code, first_met, last_activity', f'"{message.chat_id}", "{message.chat.username}", "{message.chat.first_name} {message.chat.last_name}", "{message.from_user.language_code}", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
+            self.users_db.insert('id, name, full_name, language_code, first_met, last_activity',
+                    f'"{message.chat_id}", "{message.chat.username}", "{message.chat.first_name} {message.chat.last_name}", "{message.from_user.language_code}", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
         else:
             if res[0]['status'] == 'ban':
                 logging.warning(f'banned: {message.chat_id}. {cmd}.')
                 return False
 
             # Check for flooding
-            r = self.activity_db.select('*', f'user_id={message.chat_id!r} and date={datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")!r}')
+            r = self.activity_db.select('*',
+                    f'user_id={message.chat_id!r} and date={datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")!r}')
             # Flood protect
             if len(r) > 0:
-                self.activity_db.insert('user_id, cmd, date', f'{message.chat_id!r}, {"!"+cmd!r}, CURRENT_TIMESTAMP')
+                self.activity_db.insert('user_id, cmd, date',
+                        f'{message.chat_id!r}, {"!"+cmd!r}, CURRENT_TIMESTAMP')
                 logging.warning(f'Flood activity: {message.chat_id} - {len(r)}. Blocked.')
                 return False
             self.users_db.update('last_activity=CURRENT_TIMESTAMP', f'id={message.chat_id!r}')
         # Write his activity
-        self.activity_db.insert('user_id, cmd, date', f'{message.chat_id!r}, {cmd!r}, CURRENT_TIMESTAMP')
+        self.activity_db.insert('user_id, cmd, date',
+                f'{message.chat_id!r}, {cmd!r}, CURRENT_TIMESTAMP')
         return True
-
-    def check_queue(self, context):
-        while not remote_messages.empty():
-            chat_id, msg = remote_messages.get()
-            send_message_to_user(context.bot, chat_id=chat_id, disable_web_page_preview=1, text=msg)
-            remote_messages.task_done()
 
     def start(self):
         self.updater.start_polling()
@@ -153,15 +159,16 @@ class CheckCertBot:
 
     def help_cmd(self, update, context):
         if not self.user_access('/help', update.message):
-            bot.send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                        text='You are banned')
+            send_message_to_user(context.bot,
+                    chat_id=update.message.chat_id,
+                    text='You are banned')
             return
 
         # Remove ReplyKeyboard if it was there
         #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
         #old_message = context.bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                    parse_mode='Markdown', text=help_text)
+                                    parse_mode='Markdown', text=HELP_TEXT)
 
     def id_cmd(self, update, context):
         if not self.user_access('/id', update.message):
@@ -179,9 +186,11 @@ class CheckCertBot:
         if len(args) > 0 and args[0] == 'short':
             short = True
         if short:
-            res = self.servers_db.select('url, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
+            res = self.servers_db.select('url, datetime(last_checked, "localtime"), status',
+                    f'chat_id="{str(update.message.chat_id)}"')
         else:
-            res = self.servers_db.select('datetime(when_added, "localtime"), url, warn_before_expired, datetime(last_checked, "localtime"), status', f'chat_id="{str(update.message.chat_id)}"')
+            res = self.servers_db.select('datetime(when_added, "localtime"), url, warn_before_expired, datetime(last_checked, "localtime"), status',
+                    f'chat_id="{str(update.message.chat_id)}"')
 
         output = list()
         for r in res:
@@ -222,12 +231,14 @@ class CheckCertBot:
                                             text='days must be integer')
                 return
         # Check for duplicates
-        res = self.servers_db.select('url', f'url="{url}" AND chat_id="{str(update.message.chat_id)}"')
+        res = self.servers_db.select('url',
+                f'url="{url}" AND chat_id="{str(update.message.chat_id)}"')
         if len(res) > 0:
             send_message_to_user(context.bot, chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'{url} already exists')
             return
         # datetime('Never', 'localtime') == NoneType. So I use 0000-01-01 00:00:00 as 'never' value.
-        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id', f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
+        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id',
+                f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Successfully added: {url}')
@@ -245,7 +256,8 @@ class CheckCertBot:
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
-        self.servers_db.update('status="HOLD"', f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
+        self.servers_db.update('status="HOLD"',
+                f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Hold checking for: {url}')
@@ -319,28 +331,29 @@ class CheckCertBot:
         p.start()
 
 def async_run_func(bot, chat_id, db, url):
-        error, result = check_cert(url, need_markup=True)
-        send_long_message(bot, chat_id, result+error)
-        # Write result to DB if we have an entry. Don't use chat_id here, update for all users if have.
-        res = db.select('*', f'url={url!r}')
-        if len(res) > 0:
-            if error:
-                db.update(f'last_checked=CURRENT_TIMESTAMP, status={error!r}', f'url={url!r} AND chat_id={chat_id!r}')
-            else:
-                db.update('last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="OK"', f'url={url!r} AND chat_id={chat_id!r}')
+    error, result = check_cert(url, need_markup=True)
+    send_long_message(bot, chat_id, result+error)
+    # Write result to DB if we have an entry. Don't use chat_id here, update for all users if have.
+    res = db.select('*', f'url={url!r}')
+    if len(res) > 0:
+        if error:
+            db.update(f'last_checked=CURRENT_TIMESTAMP, status={error!r}',
+                    f'url={url!r} AND chat_id={chat_id!r}')
+        else:
+            db.update('last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="OK"',
+                    f'url={url!r} AND chat_id={chat_id!r}')
 
-if __name__ == '__main__':
-    from rpyc.utils.server import ThreadedServer
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
     if args.debug:
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                level=logging.DEBUG)
     else:
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.WARNING)
-
-    remote_messages = queue.Queue()
+        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                level=logging.WARNING)
 
     rpyc_log = logging.getLogger('RPYC')
     rpyc_log.setLevel(logging.ERROR)
@@ -352,3 +365,6 @@ if __name__ == '__main__':
     token = open(TOKEN_FILE, 'r').read().rstrip('\n')
     bot = CheckCertBot(token)
     bot.start()
+
+if __name__ == '__main__':
+    main()

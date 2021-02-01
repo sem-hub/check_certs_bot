@@ -13,13 +13,12 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> s
 
     if mtype == 0:
         return dump
-    else:
-        if mtype == 1:
-            m = hashlib.sha256()
-        if mtype == 2:
-            m = hashlib.sha512()
-        m.update(dump)
-        return m.digest()
+    if mtype == 1:
+        m = hashlib.sha256()
+    if mtype == 2:
+        m = hashlib.sha512()
+    m.update(dump)
+    return m.digest()
 
 # Return (error, result)
 def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> (str, str):
@@ -40,5 +39,4 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> (
 
     if result:
         return ('', 'OK')
-    else:
-        return ('not match', '')
+    return ('not match', '')

@@ -1,7 +1,7 @@
-import certifi
 import datetime
-import pem
 import re
+import pem
+import certifi
 from pytz import UTC
 from OpenSSL import crypto
 
@@ -18,7 +18,7 @@ def get_domains_from_cert(cert: crypto.X509) -> set:
     domains.add(cert.get_subject().commonName)
     for i in range(cert.get_extension_count()):
         if cert.get_extension(i).get_short_name() == b'subjectAltName':
-            alt_names = cert.get_extension(i)._subjectAltNameString()
+            alt_names = str(cert.get_extension(i))
             if ',' in alt_names:
                 for ds in alt_names.split(', '):
                     domains.add(ds.replace('DNS:',''))

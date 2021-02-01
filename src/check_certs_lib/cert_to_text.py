@@ -7,40 +7,35 @@ def need_bold(flag: bool):
     def helper(text: str) -> str:
         if flag:
             return '<b>' + text + '</b>'
-        else:
-            return text
+        return text
     return helper
 
 def need_italic(flag: bool):
     def helper(text: str) -> str:
         if flag:
             return '<i>' + text + '</i>'
-        else:
-            return text
+        return text
     return helper
 
 def need_strike(flag: bool):
     def helper(text: str) -> str:
         if flag:
             return '<s>' + text + '</s>'
-        else:
-            return text
+        return text
     return helper
 
 def need_code(flag: bool):
     def helper(text: str) -> str:
         if flag:
             return '<code>' + text + '</code>'
-        else:
-            return text
+        return text
     return helper
 
 def need_pre(flag: bool):
     def helper(text: str) -> str:
         if flag:
             return '<pre>' + text + '</pre>'
-        else:
-            return text
+        return text
     return helper
 
 def strip_subject(subj) -> str:

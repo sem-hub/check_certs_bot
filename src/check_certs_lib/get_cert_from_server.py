@@ -1,9 +1,6 @@
-import datetime
 import socket
 import timeout_decorator
 from OpenSSL import SSL, crypto
-
-from check_certs_lib.verify_cert import verify_cert
 
 TIMEOUT = 5
 
