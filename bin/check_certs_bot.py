@@ -28,12 +28,12 @@ HELP_TEXT='''
 A bot for checking HTTP servers certificates.
 
 Enter:
-    \\[_protocol_://]_hostname_\\[:_port_]
+    \\[_protocol_://]_hostname_\\[:_port_] \\[no-tlsa] \\[no-ocsp]
 Default protocol and port is https(443)
 
 or a command:
 /help   - show this help message.
-/list   - list server names for periodic checking.
+/list \\[short]  - list server names for periodic checking.
 /add \\[_protocol_://]_hostname_\\[:_port_] \\[_days_]   - add a server to periodical checking. _days_ - warn if days till certificate expire will happen.
 /hold \\[_protocol_://]_hostname_\\[_:port_]  - temporary stop checking this entry
 /unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry
@@ -315,23 +315,35 @@ class CheckCertBot:
                                     text='Unknown command. Try /help.')
 
     def message(self, update, context):
+        allowed_cmd = ('no-tlsa', 'no-ocsp')
         if not self.user_access(update.message.text, update.message):
             return
-        error, url = parse_url(update.message.text)
+        url_text, *args = update.message.text.split(' ')
+        error, url = parse_url(url_text)
         if error != '':
             send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                         disable_web_page_preview=1, text=error)
             return
+        if len(args) > 0 and (len(args) > 2 or len(set(args)-set(allowed_cmd)) > 0):
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+                                        text='wrong arguments')
+            return
 
+        # we need no_tlsa style flags. Convert it from no-tlsa.
+        args = [a.replace('-', '_') for a in args]
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Checking certificate for: {url}')
         p = Process(target=async_run_func, args=(context.bot,
-                                                    update.message.chat_id, self.servers_db, url))
+                                                 update.message.chat_id,
+                                                 self.servers_db,
+                                                 url,
+                                                 *args))
         p.start()
 
-def async_run_func(bot, chat_id, db, url):
-    error, result = check_cert(url, need_markup=True)
+def async_run_func(bot, chat_id, db, url, *args):
+    kwargs = {v: True for (_, v) in enumerate(args)}
+    error, result = check_cert(url, need_markup=True, **kwargs)
     send_long_message(bot, chat_id, result+error)
     # Write result to DB if we have an entry. Don't use chat_id here, update for all users if have.
     res = db.select('*', f'url={url!r}')
