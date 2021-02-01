@@ -186,25 +186,25 @@ class CheckCertBot:
         if len(args) > 0 and args[0] == 'short':
             short = True
         if short:
-            res = self.servers_db.select('url, datetime(last_checked, "localtime"), status',
+            res = self.servers_db.select('url, datetime(last_checked, "localtime") as last_checked, status',
                     f'chat_id="{str(update.message.chat_id)}"')
         else:
-            res = self.servers_db.select('datetime(when_added, "localtime"), url, warn_before_expired, datetime(last_checked, "localtime"), status',
+            res = self.servers_db.select('datetime(when_added, "localtime") as when_added, url, warn_before_expired, datetime(last_checked, "localtime") as last_checked, status',
                     f'chat_id="{str(update.message.chat_id)}"')
 
         output = list()
+        if len(res) == 0:
+            output = ['Empty']
+        else:
+            line = '|'.join([str(elem) for elem in res[0].keys()])
+            output.append('<b>' + line + '</b>')
+
         for r in res:
             line = '|'.join([str(elem) for elem in r.values()])
             # Strip start/stop tag characters
             line = line.replace('<', '').replace('>', '')
             output.append(line)
-        if len(output) == 0:
-            output = ['Empty']
-        else:
-            if short:
-                output.insert(0, '<b>url|last check date|last check status</b>')
-            else:
-                output.insert(0, '<b>When added|url|days to warn before expire|last check date|last check status</b>')
+
         send_long_message(context.bot, update.message.chat_id, '\n'.join(output))
 
     def add_cmd(self, update, context):
