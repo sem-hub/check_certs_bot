@@ -55,14 +55,14 @@ def process_results(servers_db, r: dict) -> NoReturn:
     result = result.strip('\n')
     m = re.search('ID: ([0-9A-Z]+)\n?', result)
     if m is None:
-        send_to_chats(f'{r["url"]} check certificate error:\n{result}', *users)
+        send_to_chats(f'{r["url"]} check certificate error:\n{result}', users)
         logging.debug(f'Error: |{result}|')
         servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}', f'url={r["url"]!r}')
         return
     cert_id = m.group(1)
     result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
     if result != '':
-        send_to_chats(f'{r["url"]} check certificate error:\n{result}', *users)
+        send_to_chats(f'{r["url"]} check certificate error:\n{result}', users)
         logging.debug(f'Error*: {result}')
         servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',
                 f'url={r["url"]!r}')
@@ -72,7 +72,7 @@ def process_results(servers_db, r: dict) -> NoReturn:
             result = 'OK'
         else:
             result = 'Certificate was changed'
-            send_to_chats(f'{r["url"]} check certificate:\n{result}', *users)
+            send_to_chats(f'{r["url"]} check certificate:\n{result}', users)
         logging.debug(f'{result}')
         servers_db.update(
                 f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',
