@@ -1,6 +1,6 @@
 # Schemas for creating of TABLES in DB
 
-users_create_statement='''CREATE TABLE IF NOT EXISTS users (
+users_create_statement = '''CREATE TABLE IF NOT EXISTS users (
 id TEXT PRIMARY KEY,
 name TEXT,
 full_name TEXT,
@@ -10,14 +10,14 @@ last_activity TEXT,
 status TEXT
 )'''
 
-activity_create_statement='''CREATE TABLE IF NOT EXISTS activity (
+activity_create_statement = '''CREATE TABLE IF NOT EXISTS activity (
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 user_id TEXT,
 cmd TEXT,
 date TEXT
 )'''
 
-servers_create_statement='''CREATE TABLE IF NOT EXISTS servers (
+servers_create_statement = '''CREATE TABLE IF NOT EXISTS servers (
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 when_added TEXT,
 url TEXT,

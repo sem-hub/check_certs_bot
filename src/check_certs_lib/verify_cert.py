@@ -21,9 +21,9 @@ def get_domains_from_cert(cert: crypto.X509) -> set:
             alt_names = str(cert.get_extension(i))
             if ',' in alt_names:
                 for ds in alt_names.split(', '):
-                    domains.add(ds.replace('DNS:',''))
+                    domains.add(ds.replace('DNS:', ''))
             else:
-                domains.add(alt_names.replace('DNS:',''))
+                domains.add(alt_names.replace('DNS:', ''))
 
     return domains
 
@@ -34,7 +34,7 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
         if fqdn == d:
             return True
         if '*' in d:
-            rx= '^'+d.replace('.',r'\.').replace('*',r'[^\.]+')+'$'
+            rx= '^' + d.replace('.',r'\.').replace('*',r'[^\.]+') + '$'
             rec = re.compile(rx)
             if rec.match(fqdn):
                 return True
@@ -69,6 +69,6 @@ def verify_cert(certs_to_check) -> str:
     try:
         store_ctx.verify_certificate()
     except crypto.X509StoreContextError as err:
-        error = err.args[0][2]+': '+strip_subject((cert.get_subject()))
+        error = err.args[0][2] + ': ' + strip_subject((cert.get_subject()))
 
     return error

@@ -80,7 +80,7 @@ def cert_to_text(x509: crypto.X509, need_markup: bool = False) -> str:
     now_aware = datetime.datetime.utcnow().replace(tzinfo=UTC)
 
     if x509.has_expired():
-        text.append('The certificate has expired %d days ago' %
+        text.append('The certificate has expired {:d} days ago'.format(
                                     abs((expired_dt - now_aware).days))
 
         text.append(f'   {b("Cert ID")}: {x509.get_serial_number():X}')
