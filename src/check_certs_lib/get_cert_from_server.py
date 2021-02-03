@@ -1,7 +1,7 @@
 import socket
+from typing import Tuple, List, Union
 import timeout_decorator
 from OpenSSL import SSL, crypto
-from typing import Tuple, List, Union
 
 TIMEOUT = 5
 Null = ''

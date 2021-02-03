@@ -1,7 +1,7 @@
 import hashlib
 import logging
+from typing import Tuple
 from OpenSSL import crypto
-from typing import Tuple, Union
 
 from check_certs_lib.dns_requests import get_tlsa_record
 

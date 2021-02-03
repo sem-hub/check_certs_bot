@@ -109,12 +109,11 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
                     if error:
                         error += f'OCSP error: {error}\n'
                         continue
-                    else:
-                        if result != 'GOOD':
-                            error += f'OCSP error: {b(result)}\n'
-                            continue
-                        if not quiet:
-                            message += f'OCSP check result: {b(result)}\n'
+                    if result != 'GOOD':
+                        error += f'OCSP error: {b(result)}\n'
+                        continue
+                    if not quiet:
+                        message += f'OCSP check result: {b(result)}\n'
                 if not quiet:
                     message += 'Certificate is good\n'
             # only good certificate here

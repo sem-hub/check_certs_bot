@@ -1,10 +1,10 @@
 import datetime
 import re
+from typing import List, Union
 import pem
 import certifi
 from pytz import UTC
 from OpenSSL import crypto
-from typing import List, Union
 
 from check_certs_lib.cert_to_text import decode_generalized_time, strip_subject
 
@@ -50,10 +50,10 @@ def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
         certs = certs_to_check.copy()
         cert = certs.pop(0)
         # Recursive check all certificates in the chain
-        for i in range(len(certs)):
-            err = verify_cert(certs[i])
+        for crt in certs:
+            err = verify_cert(crt)
             if not err:
-                store.add_cert(certs[i])
+                store.add_cert(crt)
     else:
         cert = certs_to_check
 

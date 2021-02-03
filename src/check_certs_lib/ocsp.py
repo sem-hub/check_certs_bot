@@ -1,6 +1,6 @@
+from typing import Tuple
 from OpenSSL import crypto
 from ocspchecker import ocspchecker
-from typing import Tuple
 
 Null = ''
 
