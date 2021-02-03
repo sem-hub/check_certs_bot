@@ -25,7 +25,7 @@ def tlsa(url: str):
         logging.error(err)
         sys.exit(1)
     tlsa_value = generate_tlsa(cert, 3, 1, 1)
-    return f'_{port}._tcp.fqdn. IN TLSA 3 1 1 {"".join("{:02x}".format(c) for c in tlsa_value)}'
+    return f'_{port:d}._tcp.fqdn. IN TLSA 3 1 1 {"".join("{:02x}".format(c) for c in tlsa_value)}'
 
 def main():
     parser = argparse.ArgumentParser()
