@@ -42,7 +42,7 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
     return False
 
 # cert_to_check: list of x509 or one element x509
-# return error or None if certificati is OK
+# return error or '' if certificati is OK
 def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
     error: str = ''
     store = crypto.X509Store()
