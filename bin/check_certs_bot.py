@@ -53,7 +53,7 @@ def parse_url(url_str: str):
 
     if '://' not in url:
         url = 'https://' + url
-    err, scheme, hostname, port = parse_and_check_url(url)
+    err, (scheme, hostname, port) = parse_and_check_url(url)
     return (err, f'{scheme}://{hostname}:{port}')
 
 def send_message_to_user(bot, **kwargs):

@@ -7,7 +7,7 @@ DB_FILE = '/var/spool/check_certs/checkcerts.sqlite3'
 
 # Row_factory function for sqlite3 module. It makes SELECT returns dict()
 # Timestamps started with '0000-' returns as 'Never'
-def dict_factory(cursor, row):
+def dict_factory(cursor, row) -> dict:
     d = {}
     for idx, col in enumerate(cursor.description):
         if type(row[idx]) is str and row[idx].startswith('0000-'):
@@ -59,7 +59,7 @@ class DB:
 # DB_factory construct DB objects. Some of them can share one connection.
 class DB_factory:
     def __init__(self):
-        self.db_con = dict()
+        self.db_con: dict = {}
     def get_db(self, table: str, dbname: str = DB_FILE) -> DB:
         db_dir = os.path.dirname(dbname)
         if db_dir and '.' not in db_dir:

@@ -10,7 +10,7 @@ from check_certs_lib.get_cert_from_server import get_cert_from_server
 from check_certs_lib.tlsa import generate_tlsa
 
 def tlsa(url: str):
-    err, proto, fqdn, port = parse_and_check_url(url)
+    err, (proto, fqdn, port) = parse_and_check_url(url)
     if err != '':
         return err
     if not check_fqdn(fqdn):

@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from pytz import UTC
 from OpenSSL import crypto
 
@@ -43,11 +43,11 @@ def strip_subject(subj) -> str:
     res = res.replace('<', '')
     return res.replace('>', '')
 
-def decode_generalized_time(gt: bytes) -> str:
-    return datetime.datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
+def decode_generalized_time(gt: bytes) -> datetime:
+    return datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
 
 def list_of_tuples(indent: str, lt: tuple) -> str:
-    text = list()
+    text: list = []
     d = {'C': 'countryName',
          'O': 'organizationName',
          'ST': 'stateOrProvinceName',
@@ -57,14 +57,14 @@ def list_of_tuples(indent: str, lt: tuple) -> str:
         }
     for (name, val) in lt:
         if name in d.keys():
-            text.append(indent + d[name].decode('utf8') + ': ' + val.decode('utf8'))
+            text.append(indent + d[name] + ': ' + val.decode('utf8'))
         else:
             text.append(indent + name.decode('utf8') + ': ' + val.decode('utf8'))
 
     return '\n'.join(map(str, text))
 
 def x509_alt_names(indent: str, st: str) -> str:
-    text = list()
+    text: list = []
     for s in st.split(','):
         s = s.replace(' ', '')
         s = s.replace(':', ': ')
@@ -74,16 +74,16 @@ def x509_alt_names(indent: str, st: str) -> str:
 
 def cert_to_text(x509: crypto.X509, need_markup: bool = False) -> str:
     b = need_bold(need_markup)
-    text = list()
+    text: list = []
     issued_dt = decode_generalized_time(x509.get_notBefore())
     expired_dt = decode_generalized_time(x509.get_notAfter())
-    now_aware = datetime.datetime.utcnow().replace(tzinfo=UTC)
+    now_aware = datetime.utcnow().replace(tzinfo=UTC)
 
     if x509.has_expired():
         text.append('The certificate has expired {:d} days ago'.format(
-                                    abs((expired_dt - now_aware).days))
+            abs((expired_dt - now_aware).days)))
 
-        text.append(f'   {b("Cert ID")}: {x509.get_serial_number():X}')
+    text.append(f'   {b("Cert ID")}: {x509.get_serial_number():X}')
     text.append(f'   {b("Issuer")}:')
     text.append(list_of_tuples('      ',
                     x509.get_issuer().get_components()))

@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple
 
 from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.get_cert_from_server import get_chain_from_server
@@ -9,9 +10,10 @@ from check_certs_lib.tlsa import check_tlsa
 from check_certs_lib.ocsp import check_ocsp
 
 MAIL_PROTO = ('smtp', 'smtps', 'submission')
+Null = ''
 
 # Return (error, result)
-def check_cert(url_str: str, **flags) -> (str, str):
+def check_cert(url_str: str, **flags) -> Tuple[str, str]:
     logger = logging.getLogger(__name__)
     # For fast using
     quiet = flags.get('quiet', False)
@@ -22,17 +24,17 @@ def check_cert(url_str: str, **flags) -> (str, str):
 
     b = need_bold(need_markup)
 
-    error, proto, fqdn, port = parse_and_check_url(url_str)
-    if error != '':
-        return (error, '')
+    error, (proto, fqdn, port) = parse_and_check_url(url_str)
+    if error:
+        return (error, Null)
     if not check_fqdn(fqdn):
-        return (f'Host name is invalid: {fqdn}\n', '')
+        return (f'Host name is invalid: {fqdn}\n', Null)
 
     logger.debug(f'{proto} {fqdn} {port}')
 
-    addresses = list()
-    error_msg = ''
-    message = ''
+    addresses: list = []
+    error_msg: str = ''
+    message: str = ''
 
     if proto in MAIL_PROTO:
         if not quiet:
@@ -52,7 +54,7 @@ def check_cert(url_str: str, **flags) -> (str, str):
 
     if len(addresses) == 0:
         error_msg += f'No address records found for {fqdn}\n'
-        return (error_msg, '')
+        return (error_msg, Null)
     if not quiet:
         message += f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
 
@@ -104,10 +106,15 @@ def check_cert(url_str: str, **flags) -> (str, str):
                 if len(chain) > 1 and not flags.get('no_ocsp'):
                     logger.debug('check OCSP')
                     error, result = check_ocsp(chain)
-                    if not error and not quiet:
-                        message += f'OCSP check result: {b(result)}\n'
-                    if result != 'GOOD':
+                    if error:
+                        error += f'OCSP error: {error}\n'
                         continue
+                    else:
+                        if result != 'GOOD':
+                            error += f'OCSP error: {b(result)}\n'
+                            continue
+                        if not quiet:
+                            message += f'OCSP check result: {b(result)}\n'
                 if not quiet:
                     message += 'Certificate is good\n'
             # only good certificate here

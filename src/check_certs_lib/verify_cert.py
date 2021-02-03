@@ -4,6 +4,7 @@ import pem
 import certifi
 from pytz import UTC
 from OpenSSL import crypto
+from typing import List, Union
 
 from check_certs_lib.cert_to_text import decode_generalized_time, strip_subject
 
@@ -42,8 +43,8 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
 
 # cert_to_check: list of x509 or one element x509
 # return error or None if certificati is OK
-def verify_cert(certs_to_check) -> str:
-    error = None
+def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
+    error: str = ''
     store = crypto.X509Store()
     if type(certs_to_check) == list:
         certs = certs_to_check.copy()

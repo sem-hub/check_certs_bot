@@ -4,7 +4,6 @@ import argparse
 import logging
 from multiprocessing import Pool
 import re
-from typing import NoReturn
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.db import DB_factory
@@ -39,7 +38,7 @@ def process_checking(db, dry_run, rt: tuple) -> dict:
         process_results(db, res)
     return res
 
-def process_results(servers_db, r: dict) -> NoReturn:
+def process_results(servers_db, r: dict) -> None:
     if not r:
         return
     # we have more than one user for this url

@@ -1,9 +1,13 @@
 import re
 import socket
 from urllib.parse import urlparse
+from typing import Tuple
+
+NoResult = ('', '', 0)
+Null = ''
 
 def is_valid_fqdn(fqdn: str) -> bool:
-    if fqdn is None or len(fqdn) > 255:
+    if not fqdn or len(fqdn) > 255:
         return False
     if fqdn.find('.') == -1:
         return False
@@ -11,29 +15,29 @@ def is_valid_fqdn(fqdn: str) -> bool:
     return all(allowed.match(x) for x in fqdn.split('.'))
 
 # Return: (error, protocol, fqdn, port)
-def parse_and_check_url(url_str: str) -> (str, str, str, str):
+def parse_and_check_url(url_str: str) -> Tuple[str, Tuple[str, str, int]]:
     if '://' not in url_str:
-        return (f'URL error: {url_str}\n', '', '', '')
+        return (f'URL error: {url_str}\n', NoResult)
 
     url = urlparse(url_str)
-    scheme = url.scheme
-    fqdn = url.hostname
+    scheme = str(url.scheme)
+    fqdn = str(url.hostname)
     try:
         port = url.port
     except ValueError:
-        return (f'port number error: {url_str}\n', '', '', '')
+        return (f'port number error: {url_str}\n', NoResult)
     if port is None:
         try:
             port = socket.getservbyname(scheme, 'tcp')
         except OSError:
-            return (f'Unknown protocol: {scheme}\n', '', '', '')
+            return (f'Unknown protocol: {scheme}\n', NoResult)
     if port < 1 or port > 65535:
-        return (f'Bad port number: {port}\n', '', '', '')
+        return (f'Bad port number: {port}\n', NoResult)
 
     if scheme == '':
-        return (f'URL parse error: {url_str}\n', '', '', '')
+        return (f'URL parse error: {url_str}\n', NoResult)
 
     if not is_valid_fqdn(fqdn):
-        return (f'Hostname parse error: {fqdn}\n', '', '', '')
+        return (f'Hostname parse error: {fqdn}\n', NoResult)
 
-    return ('', scheme, fqdn, port)
+    return (Null, (scheme, fqdn, port))

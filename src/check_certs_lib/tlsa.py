@@ -1,8 +1,11 @@
 import hashlib
 import logging
 from OpenSSL import crypto
+from typing import Tuple, Union
 
 from check_certs_lib.dns_requests import get_tlsa_record
+
+Null = ''
 
 def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> str:
     if selector == 1:
@@ -17,15 +20,16 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> s
     if mtype == 2:
         m = hashlib.sha512()
     m.update(dump)
-    return m.digest()
+    return m.digest().decode('utf-8')
 
 # Return (error, result)
-def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> (str, str):
+def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True
+        ) -> Tuple[str, str]:
     logger = logging.getLogger(__name__)
     answer = get_tlsa_record(fqdn, port, quiet=True)
 
     if len(answer) == 0:
-        return ('not found', '')
+        return ('not found', Null)
     result = False
     for a in answer:
         if a.usage not in (1, 3):
@@ -37,5 +41,5 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True) -> (
         result = a.cert == tlsa
 
     if result:
-        return ('', 'OK')
-    return ('not match', '')
+        return (Null, 'OK')
+    return ('not match', Null)

@@ -1,4 +1,7 @@
 import logging
+from typing import Dict, List
+import dns.dnssec
+import dns.rcode
 import dns.resolver
 
 # timeout for dns queries
@@ -18,15 +21,15 @@ def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False,
     dname = dns.name.from_text(fqdn)
 
     if only_ipv4:
-        a1 = list()
+        a1: list = []
     else:
         a1 = get_dns_request(dname, 'AAAA')
     if only_ipv6:
-        a2 = list()
+        a2: list = []
     else:
         a2 = get_dns_request(dname, 'A')
 
-    r = list()
+    r: list = []
     for rdata in a1 + a2:
         r.append(rdata.to_text())
         if only_first:
@@ -35,14 +38,14 @@ def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False,
 
 def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
     logger = logging.getLogger(__name__)
-    result = list()
-    answers = None
+    result: list = []
+    answers: list = []
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
         if not quiet:
             logger.warning(f'No DNS record {rtype} found for {dname}')
-        return list()
+        return []
     except dns.resolver.NoAnswer:
         pass
     else:
@@ -52,7 +55,7 @@ def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
 
 # Returns: dict[zone] -> autority servers' adresses for the zone
 #                        only one elemeint in the dictionary always
-def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
+def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]:
     logger = logging.getLogger(__name__ + '.get_authority_ns_for')
     # Turn off debug for this function temporarly
     logger.setLevel(logging.INFO)
@@ -61,8 +64,8 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
     default_resolver = dns.resolver.get_default_resolver()
     nameservers = default_resolver.nameservers
 
-    authority = dict()
-    sdomain = ''
+    authority: Dict[str, list] = {}
+    sdomain: str = ''
     for sublevel in dlevel:
         sdomain = sublevel + '.' + sdomain
         logger.debug(sdomain)
@@ -93,7 +96,7 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
         else:
             rrset = response.answer[0]
 
-        ns = list()
+        ns: List[str] = []
         for rr in rrset:
             if rr.rdtype == dns.rdatatype.NS:
                 aserver = rr.target
@@ -104,6 +107,7 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> dict:
             nameservers = ns
             authority.clear()
             authority[sdomain] = ns
+        # end for
     return authority
 
 def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
@@ -118,7 +122,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
         response = dns.query.udp(request, nsaddr[0], timeout=TIMEOUT)
     except Exception as err:
         logger.error(str(err))
-        return list()
+        return []
     i = 1
     # Try all servers if any error occured
     while response.rcode() != dns.rcode.NOERROR and \
@@ -133,11 +137,11 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error(f'zone {zone} resolve error')
-        return list()
+        return []
     if len(response.answer) != 2:
         if not quiet:
             logger.error(f'zone {zone} is not signed')
-        return list()
+        return []
     answer = response.answer
     dnskey = answer[0]
 
@@ -148,7 +152,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     except dns.dnssec.ValidationFailure:
         if not quiet:
             logger.error(f'zone {zone} signature error')
-        return list()
+        return []
 
     name = dns.name.from_text(dname)
     request = dns.message.make_query(name, rtype, want_dnssec=True)
@@ -156,7 +160,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
         response = dns.query.udp(request, nsaddr[0], timeout=TIMEOUT)
     except Exception as err:
         logger.debug(str(err))
-        return list()
+        return []
     i = 1
     # Try all servers if any error occured
     while response.rcode() != dns.rcode.NOERROR and \
@@ -167,20 +171,20 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error(f'{dname} resolve error')
-        return list()
+        return []
     if len(response.answer) < 2:
         if not quiet:
             logger.error(f'{dname} is not signed')
-        return list()
+        return []
     answer = response.answer
     try:
         dns.dnssec.validate(answer[0], answer[1], {zname: dnskey})
     except dns.dnssec.ValidationFailure:
         if not quiet:
             logger.error(f'\'{rtype}\' record for {dname} signature error')
-        return list()
+        return []
 
-    result = list()
+    result: list = []
     for rr in answer:
         if rr.rdtype == dns.rdatatype.from_text(rtype):
             result.append(rr.to_rdataset()[0])
