@@ -4,6 +4,7 @@ White/Black lists implementation for logging.
 
 import logging
 
+
 class Whitelist(logging.Filter):
     '''
     Set a white list as Filter for logging.

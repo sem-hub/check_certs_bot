@@ -13,6 +13,7 @@ from check_certs_lib.dns_requests import check_fqdn, get_dns_request
 from check_certs_lib.get_cert_from_server import get_cert_from_server
 from check_certs_lib.tlsa import generate_tlsa
 
+
 def tlsa(url: str):
     '''Generate TLSA record'''
     err, (proto, fqdn, port) = parse_and_check_url(url)

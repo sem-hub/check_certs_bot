@@ -2,8 +2,9 @@
 
 import re
 import socket
-from urllib.parse import urlparse
 from typing import Tuple
+from urllib.parse import urlparse
+
 
 # Some shortenings for return values.
 NoResult = ('', '', 0)

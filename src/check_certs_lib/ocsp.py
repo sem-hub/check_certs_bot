@@ -3,8 +3,11 @@ A function to do OCSP checking.
 '''
 
 from typing import Tuple
+
 from OpenSSL import crypto
+
 from ocspchecker import ocspchecker
+
 
 Null = ''
 

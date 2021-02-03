@@ -18,6 +18,7 @@ from check_certs_lib.db import DB_factory
 from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 from check_certs_lib.send_to_chat import send_to_chats
 
+
 def check_process_closure(db, dry_run: bool):
     '''A closure to hide arguments. Multiprocess function takes only one.'''
     global helper       # it's a dirty hack to prevent "Can't picle local object" error in multiprocessing module

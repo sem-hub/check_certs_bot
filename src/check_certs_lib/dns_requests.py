@@ -2,9 +2,11 @@
 
 import logging
 from typing import Dict, List
+
 import dns.dnssec
 import dns.rcode
 import dns.resolver
+
 
 # timeout for dns queries
 TIMEOUT = 5

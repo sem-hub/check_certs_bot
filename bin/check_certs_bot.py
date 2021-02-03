@@ -32,15 +32,17 @@ from multiprocessing import Process
 import queue
 import threading
 from typing import Tuple, NoReturn
+
 import rpyc
+from rpyc.utils.server import ThreadedServer
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from rpyc.utils.server import ThreadedServer
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.db import DB_factory
 import check_certs_lib.db_schemas as db_schemas
+
 
 TOKEN_FILE = '/var/spool/check_certs/TOKEN'
 

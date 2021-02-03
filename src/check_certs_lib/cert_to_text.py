@@ -1,8 +1,10 @@
 '''Set of functions for certificat visualisation.'''
 
 from datetime import datetime
-from pytz import UTC
+
 from OpenSSL import crypto
+from pytz import UTC
+
 
 # Text markups
 def need_bold(flag: bool):

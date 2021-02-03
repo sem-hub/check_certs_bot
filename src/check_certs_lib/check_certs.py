@@ -11,6 +11,7 @@ from check_certs_lib.dns_requests import get_dns_request, check_fqdn, get_all_dn
 from check_certs_lib.tlsa import check_tlsa
 from check_certs_lib.ocsp import check_ocsp
 
+
 MAIL_PROTO = ('smtp', 'smtps', 'submission')
 Null = ''
 

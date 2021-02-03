@@ -6,8 +6,10 @@ EHLO/STARTTLS commands for SMTP.
 
 import socket
 from typing import Tuple, List, Union
-import timeout_decorator
+
 from OpenSSL import SSL, crypto
+import timeout_decorator
+
 
 TIMEOUT = 5
 Null = ''

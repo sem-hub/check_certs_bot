@@ -4,6 +4,7 @@ import logging
 import os
 import sqlite3
 
+
 # Default DB file path
 DB_FILE = '/var/spool/check_certs/checkcerts.sqlite3'
 

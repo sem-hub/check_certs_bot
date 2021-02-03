@@ -12,6 +12,7 @@ import logging
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 
+
 # MAIN ()
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

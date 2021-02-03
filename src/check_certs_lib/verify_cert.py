@@ -5,12 +5,14 @@ Set of functions for checking and verifying X509 certificates.
 import datetime
 import re
 from typing import List, Set, Union
-import pem
+
 import certifi
+import pem
 from pytz import UTC
 from OpenSSL import crypto
 
 from check_certs_lib.cert_to_text import decode_generalized_time, strip_subject
+
 
 def get_days_before_expired(cert: crypto.X509) -> int:
     '''Calcaulate number of days before a certificate expire.'''
