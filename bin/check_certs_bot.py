@@ -11,6 +11,7 @@ import rpyc
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from rpyc.utils.server import ThreadedServer
+from typing import Tuple, NoReturn
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
@@ -19,10 +20,7 @@ import check_certs_lib.db_schemas as db_schemas
 
 TOKEN_FILE = '/var/spool/check_certs/TOKEN'
 
-# For running check_certs.py
-prog_dir = path.dirname(path.abspath(__file__))
-
-remote_messages = queue.Queue()
+remote_messages: queue.Queue = queue.Queue()
 
 HELP_TEXT='''
 A bot for checking HTTP servers certificates.
@@ -48,7 +46,7 @@ For *smtp*, *smtps* and *submission* protocols you can specify domain name not F
 For *smtp* protocol EHLO/STARTTLS commands will be send first to start TLS/SSL session.
 '''
 
-def parse_url(url_str: str):
+def parse_url(url_str: str) -> Tuple[str, str]:
     url = url_str.strip().lower().encode('ASCII', 'replace').decode('utf-8')
 
     if '://' not in url:
@@ -56,7 +54,7 @@ def parse_url(url_str: str):
     err, (scheme, hostname, port) = parse_and_check_url(url)
     return (err, f'{scheme}://{hostname}:{port}')
 
-def send_message_to_user(bot, **kwargs):
+def send_message_to_user(bot, **kwargs) -> None:
     success = False
     attemps = 0
     while not success and attemps < 5:
@@ -67,7 +65,7 @@ def send_message_to_user(bot, **kwargs):
             logging.error(str(e))
         attemps += 1
 
-def send_long_message(bot, chat_id, text: str):
+def send_long_message(bot, chat_id, text: str) -> None:
     max_len = telegram.constants.MAX_MESSAGE_LENGTH
     for i in range(0, len(text), max_len):
         send_message_to_user(bot, chat_id=chat_id, parse_mode='HTML',
@@ -75,10 +73,10 @@ def send_long_message(bot, chat_id, text: str):
                 text=text[i:i+max_len])
 
 class RPyCService(rpyc.Service):
-    def exposed_add_message(self, chat_id, msg):
+    def exposed_add_message(self, chat_id, msg) -> None:
         remote_messages.put([chat_id, msg])
 
-def check_queue(context):
+def check_queue(context) -> None:
     while not remote_messages.empty():
         chat_id, msg = remote_messages.get()
         send_message_to_user(context.bot, chat_id=chat_id, disable_web_page_preview=1, text=msg)
@@ -156,11 +154,11 @@ class CheckCertBot:
                 f'{message.chat_id!r}, {cmd!r}, CURRENT_TIMESTAMP')
         return True
 
-    def start(self):
+    def start(self) -> None:
         self.updater.start_polling()
         self.updater.idle()
 
-    def help_cmd(self, update, context):
+    def help_cmd(self, update, context) -> None:
         if not self.user_access('/help', update.message):
             send_message_to_user(context.bot,
                     chat_id=update.message.chat_id,
@@ -173,14 +171,14 @@ class CheckCertBot:
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     parse_mode='Markdown', text=HELP_TEXT)
 
-    def id_cmd(self, update, context):
+    def id_cmd(self, update, context) -> None:
         if not self.user_access('/id', update.message):
             send_message_to_user(context.bot, chat_id=update.message.chat_id, text='You are banned')
             return
         text = f'{update.message.chat_id}: {update.message.chat.username} {update.message.chat.first_name} {update.message.chat.last_name} {update.message.from_user.language_code}'
         send_message_to_user(context.bot, chat_id=update.message.chat_id, text=text)
 
-    def list_cmd(self, update, context):
+    def list_cmd(self, update, context) -> None:
         args = context.args
         if not self.user_access(f'/list {args}', update.message):
             return
@@ -210,7 +208,7 @@ class CheckCertBot:
 
         send_long_message(context.bot, update.message.chat_id, '\n'.join(output))
 
-    def add_cmd(self, update, context):
+    def add_cmd(self, update, context) -> None:
         args = context.args
         if not self.user_access(f'/add {args}', update.message):
             return
@@ -246,7 +244,7 @@ class CheckCertBot:
                                     disable_web_page_preview=1,
                                     text=f'Successfully added: {url}')
 
-    def hold_cmd(self, update, context):
+    def hold_cmd(self, update, context) -> None:
         args = context.args
         if not self.user_access(f'/hold {args}', update.message):
             return
@@ -265,7 +263,7 @@ class CheckCertBot:
                                     disable_web_page_preview=1,
                                     text=f'Hold checking for: {url}')
 
-    def unhold_cmd(self, update, context):
+    def unhold_cmd(self, update, context) -> None:
         args = context.args
         if not self.user_access(f'/unhold {args}', update.message):
             return
@@ -285,7 +283,7 @@ class CheckCertBot:
                                     disable_web_page_preview=1,
                                     text=f'Unhold checking for: {url}')
 
-    def remove_cmd(self, update, context):
+    def remove_cmd(self, update, context) -> None:
         args = context.args
         if not self.user_access(f'/remove {args}', update.message):
             return
@@ -304,20 +302,20 @@ class CheckCertBot:
                                     disable_web_page_preview=1,
                                     text=f'Successfully removed: {url}')
 
-    def reset_cmd(self, update, context):
+    def reset_cmd(self, update, context) -> None:
         if not self.user_access('/reset', update.message):
             return
         self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     text='Successfully reseted')
 
-    def unknown_cmd(self, update, context):
+    def unknown_cmd(self, update, context) -> None:
         if not self.user_access('unknown', update.message):
             return
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     text='Unknown command. Try /help.')
 
-    def message(self, update, context):
+    def message(self, update, context) -> None:
         allowed_cmd = ('no-tlsa', 'no-ocsp')
         if not self.user_access(update.message.text, update.message):
             return
@@ -344,7 +342,7 @@ class CheckCertBot:
                                                  *args))
         p.start()
 
-def async_run_func(bot, chat_id, db, url, *args):
+def async_run_func(bot, chat_id, db, url, *args) -> None:
     kwargs = {v: True for (_, v) in enumerate(args)}
     error, result = check_cert(url, need_markup=True, **kwargs)
     send_long_message(bot, chat_id, result+error)
@@ -358,7 +356,7 @@ def async_run_func(bot, chat_id, db, url, *args):
             db.update('last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="OK"',
                     f'url={url!r} AND chat_id={chat_id!r}')
 
-def main():
+def main() -> NoReturn:
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
