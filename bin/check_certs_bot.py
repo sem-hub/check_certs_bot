@@ -4,14 +4,13 @@ import argparse
 import datetime
 import logging
 from multiprocessing import Process
-from os import path
 import queue
 import threading
+from typing import Tuple, NoReturn
 import rpyc
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from rpyc.utils.server import ThreadedServer
-from typing import Tuple, NoReturn
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
