@@ -9,7 +9,7 @@ from check_certs_lib.dns_requests import check_fqdn, get_all_dns, get_dns_reques
 from check_certs_lib.get_cert_from_server import get_chain_from_server, get_cert_from_server
 from check_certs_lib.logging_black_white_lists import Blacklist, Whitelist, add_filter_to_all_handlers
 from check_certs_lib.ocsp import check_ocsp
-from check_certs_lib.send_to_chat import send_to_chat
+from check_certs_lib.send_to_chat import send_to_chats
 from check_certs_lib.tlsa import check_tlsa, generate_tlsa
 from check_certs_lib.verify_cert import get_days_before_expired, get_domains_from_cert, verify_cert
 
