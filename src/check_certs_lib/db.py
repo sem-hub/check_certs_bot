@@ -1,7 +1,6 @@
 import logging
 import os
 import sqlite3
-from typing import NoReturn
 
 DB_FILE = '/var/spool/check_certs/checkcerts.sqlite3'
 
@@ -25,7 +24,7 @@ class DB:
         self.logger = logging.getLogger(__name__)
     def __del__(self):
         self.con.close()
-    def create(self, statement: str) -> NoReturn:
+    def create(self, statement: str) -> None:
         self.logger.debug(statement)
         cur = self.con.cursor()
         cur.execute(statement)
@@ -35,7 +34,7 @@ class DB:
         cur = self.con.cursor()
         cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
         return cur.fetchall()
-    def insert(self, fields: str, values: str) -> NoReturn:
+    def insert(self, fields: str, values: str) -> None:
         if fields in (None, ''):
             self.logger.debug(f'INSERT INTO {self.table} VALUES ({values})')
             cur = self.con.cursor()
@@ -45,12 +44,12 @@ class DB:
             cur = self.con.cursor()
             cur.execute(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
         self.con.commit()
-    def update(self, what: str, where: str) -> NoReturn:
+    def update(self, what: str, where: str) -> None:
         self.logger.debug(f'UPDATE {self.table} SET {what} WHERE {where}')
         cur = self.con.cursor()
         cur.execute(f'UPDATE {self.table} SET {what} WHERE {where}')
         self.con.commit()
-    def delete(self, where: str) -> NoReturn:
+    def delete(self, where: str) -> None:
         self.logger.debug(f'DELETE FROM {self.table} WHERE {where}')
         cur = self.con.cursor()
         cur.execute(f'DELETE FROM {self.table} WHERE {where}')
