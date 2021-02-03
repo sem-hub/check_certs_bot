@@ -7,7 +7,7 @@ from check_certs_lib.dns_requests import get_tlsa_record
 
 Null = ''
 
-def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> str:
+def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> bytes:
     if selector == 1:
         dump = crypto.dump_publickey(crypto.FILETYPE_ASN1, cert.get_pubkey())
     else:
@@ -20,7 +20,7 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> s
     if mtype == 2:
         m = hashlib.sha512()
     m.update(dump)
-    return m.digest().decode('utf-8')
+    return m.digest()
 
 # Return (error, result)
 def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True
