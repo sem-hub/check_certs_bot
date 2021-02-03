@@ -1,9 +1,12 @@
+'''Set of functions for certificat visualisation.'''
+
 from datetime import datetime
 from pytz import UTC
 from OpenSSL import crypto
 
 # Text markups
 def need_bold(flag: bool):
+    '''A closure to make a string bold if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
             return '<b>' + text + '</b>'
@@ -11,6 +14,7 @@ def need_bold(flag: bool):
     return helper
 
 def need_italic(flag: bool):
+    '''A closure to make a string italic if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
             return '<i>' + text + '</i>'
@@ -18,6 +22,7 @@ def need_italic(flag: bool):
     return helper
 
 def need_strike(flag: bool):
+    '''A closure to make a string strike if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
             return '<s>' + text + '</s>'
@@ -25,6 +30,7 @@ def need_strike(flag: bool):
     return helper
 
 def need_code(flag: bool):
+    '''A closure to make a string as code if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
             return '<code>' + text + '</code>'
@@ -32,6 +38,7 @@ def need_code(flag: bool):
     return helper
 
 def need_pre(flag: bool):
+    '''A closure to make a string preformated if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
             return '<pre>' + text + '</pre>'
@@ -39,14 +46,17 @@ def need_pre(flag: bool):
     return helper
 
 def strip_subject(subj) -> str:
+    '''Strip certificate subject from tags characters (<>).'''
     res = str(subj)
     res = res.replace('<', '')
     return res.replace('>', '')
 
 def decode_generalized_time(gt: bytes) -> datetime:
+    '''Decode byte string as generalized time (UTC).'''
     return datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
 
 def list_of_tuples(indent: str, lt: tuple) -> str:
+    '''Return tuple as sting. Try to decode well known (RFC2253) x500 attribute codes.'''
     text: list = []
     d = {'C': 'countryName',
          'O': 'organizationName',
@@ -64,6 +74,7 @@ def list_of_tuples(indent: str, lt: tuple) -> str:
     return '\n'.join(map(str, text))
 
 def x509_alt_names(indent: str, st: str) -> str:
+    '''Convert alternate names to string.'''
     text: list = []
     for s in st.split(','):
         s = s.replace(' ', '')
@@ -73,6 +84,7 @@ def x509_alt_names(indent: str, st: str) -> str:
     return '\n'.join(map(str, text))
 
 def cert_to_text(x509: crypto.X509, need_markup: bool = False) -> str:
+    '''Return x509 certificate as a formated string'''
     b = need_bold(need_markup)
     text: list = []
     issued_dt = decode_generalized_time(x509.get_notBefore())

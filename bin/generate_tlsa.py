@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+'''
+Read URLs list from file or stdin and generate TLSA records to put them to DNS.
+'''
+
 import argparse
 import logging
 import sys
@@ -10,6 +14,7 @@ from check_certs_lib.get_cert_from_server import get_cert_from_server
 from check_certs_lib.tlsa import generate_tlsa
 
 def tlsa(url: str):
+    '''Generate TLSA record'''
     err, (proto, fqdn, port) = parse_and_check_url(url)
     if err != '':
         return err
@@ -28,6 +33,7 @@ def tlsa(url: str):
     return f'_{port:d}._tcp.fqdn. IN TLSA 3 1 1 {"".join("{:02x}".format(c) for c in tlsa_value)}'
 
 def main():
+    '''Main function'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('source', nargs='?',

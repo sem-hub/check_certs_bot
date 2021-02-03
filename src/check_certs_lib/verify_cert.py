@@ -1,6 +1,10 @@
+'''
+Set of functions for checking and verifying X509 certificates.
+'''
+
 import datetime
 import re
-from typing import List, Union
+from typing import List, Set, Union
 import pem
 import certifi
 from pytz import UTC
@@ -9,11 +13,16 @@ from OpenSSL import crypto
 from check_certs_lib.cert_to_text import decode_generalized_time, strip_subject
 
 def get_days_before_expired(cert: crypto.X509) -> int:
+    '''Calcaulate number of days before a certificate expire.'''
     expired_dt = decode_generalized_time(cert.get_notAfter())
     now_aware = datetime.datetime.utcnow().replace(tzinfo=UTC)
     return (expired_dt - now_aware).days
 
-def get_domains_from_cert(cert: crypto.X509) -> set:
+def get_domains_from_cert(cert: crypto.X509) -> Set[str]:
+    '''
+    Get domains list from a certificate.
+    Return: set of domains as strings.
+    '''
     domains = set()
     # Look first onto commonName
     domains.add(cert.get_subject().commonName)
@@ -29,7 +38,10 @@ def get_domains_from_cert(cert: crypto.X509) -> set:
     return domains
 
 def match_domain(fqdn: str, cert: crypto.X509) -> bool:
-    # get domains list from the certificate
+    '''
+    Look for matching the FQDN in domains from X509 certificate.
+    Return: a boolian.
+    '''
     domains = get_domains_from_cert(cert)
     for d in domains:
         if fqdn == d:
@@ -41,9 +53,12 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
                 return True
     return False
 
-# cert_to_check: list of x509 or one element x509
-# return error or '' if certificati is OK
 def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
+    '''
+    Main function to check certification validating.
+    Get: list of X509 or one element X509
+    Return: error or '' if certificati is OK
+    '''
     error: str = ''
     store = crypto.X509Store()
     if type(certs_to_check) == list:
@@ -63,7 +78,7 @@ def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
     for ca in pem.parse(raw_ca):
         store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM, str(ca)))
 
-# XXX Need we very strict checking flags?
+# Need we very strict checking flags?
 #    store.set_flags(crypto.X509StoreFlags.X509_STRICT |
 #                        crypto.X509StoreFlags.CB_ISSUER_CHECK)
     store_ctx = crypto.X509StoreContext(store, cert)

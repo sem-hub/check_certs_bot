@@ -1,3 +1,5 @@
+'''A function for checking certificate.'''
+
 import logging
 from typing import Tuple
 
@@ -14,6 +16,34 @@ Null = ''
 
 # Return (error, result)
 def check_cert(url_str: str, **flags) -> Tuple[str, str]:
+    '''
+    Make all checks for X509 certificate
+
+    Get a server URL and some flags as arguments.
+
+    Flags: dict(name, value)
+        Where name is a flag name, most flags are bool.
+        warn_before_expired is a number days user will warn before
+            certificate will expire.
+
+    Supported flags:
+        quiet - don't output anything except errors.
+        need_markup - markup output with some HTML tags for telegram Bot.
+        only_ipv4 - use only IPv4 addresses for checking.
+        only_ipv6 - use only IPv6 addresses for checking.
+        only_one - use only firsm met IP after resolve for checking.
+        print_id - print certificate ID as first line. For periodic_check.py.
+        warn_before_expired - add warn user if certificate will expire <= days
+                                after today.
+        no-tlsa - disable TLSA checks (certificate pinning in DNS).
+                    These checks include DNSSEC protected requests.
+        no-ocsp - disable OCSP checks (if certificate revoked or not).
+
+        TLSA and OCSP are most long checks.
+
+    Return: tuple(error, result)
+
+    '''
     logger = logging.getLogger(__name__)
     # For fast using
     quiet = flags.get('quiet', False)

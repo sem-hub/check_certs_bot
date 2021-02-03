@@ -1,12 +1,20 @@
+'''Functions for checking FQDN and URL'''
+
 import re
 import socket
 from urllib.parse import urlparse
 from typing import Tuple
 
+# Some shortenings for return values.
 NoResult = ('', '', 0)
 Null = ''
 
 def is_valid_fqdn(fqdn: str) -> bool:
+    '''
+    Check if DNS name (FQDN) is correct
+
+    Return a boolean True or False.
+    '''
     if not fqdn or len(fqdn) > 255:
         return False
     if fqdn.find('.') == -1:
@@ -14,8 +22,12 @@ def is_valid_fqdn(fqdn: str) -> bool:
     allowed = re.compile(r'(?!-)[A-Z\d-]{1,63}(?<!-)$', re.IGNORECASE)
     return all(allowed.match(x) for x in fqdn.split('.'))
 
-# Return: (error, protocol, fqdn, port)
 def parse_and_check_url(url_str: str) -> Tuple[str, Tuple[str, str, int]]:
+    '''
+    Parse and check server's URL.
+
+    Return: tuple(error, tuple(protocol, fqdn, port))
+    '''
     if '://' not in url_str:
         return (f'URL error: {url_str}\n', NoResult)
 

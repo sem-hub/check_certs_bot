@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+'''
+A command line utility to run periodic check for URLs from DB.
+It must run with cron(8) for example.
+All URLs check paralelly via a pool of process.
+You can controll paralelly runned task with an argument.
+Use --help to see all options.
+'''
+
 import argparse
 import logging
 from multiprocessing import Pool
@@ -11,12 +19,14 @@ from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_a
 from check_certs_lib.send_to_chat import send_to_chats
 
 def check_process_closure(db, dry_run: bool):
+    '''A closure to hide arguments. Multiprocess function takes only one.'''
     global helper       # it's a dirty hack to prevent "Can't picle local object" error in multiprocessing module
     def helper(fields: tuple):
         return process_checking(db, dry_run, fields)
     return helper
 
 def process_checking(db, dry_run, rt: tuple) -> dict:
+    '''Run all checks via check_certs_lib.check_cert()'''
     r = rt[1]
     logging.debug(f'{r["url"]}')
     if r['status'] == 'HOLD':
@@ -39,6 +49,7 @@ def process_checking(db, dry_run, rt: tuple) -> dict:
     return res
 
 def process_results(servers_db, r: dict) -> None:
+    '''Process results, save it to DB etc.'''
     if not r:
         return
     # we have more than one user for this url
@@ -78,6 +89,7 @@ def process_results(servers_db, r: dict) -> None:
                 f'url={r["url"]!r}')
 
 def main():
+    '''Main function'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--dry-run', action='store_true')

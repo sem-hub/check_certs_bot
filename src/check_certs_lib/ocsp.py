@@ -1,3 +1,7 @@
+'''
+A function to do OCSP checking.
+'''
+
 from typing import Tuple
 from OpenSSL import crypto
 from ocspchecker import ocspchecker
@@ -6,6 +10,9 @@ Null = ''
 
 # Return (error, result)
 def check_ocsp(cert_chain: list) -> Tuple[str, str]:
+    '''
+    Make an OSCP request to check if a certificate is revoke or actual.
+    '''
     cert_str_list: list = []
 
     for cert in cert_chain:

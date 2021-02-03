@@ -1,3 +1,9 @@
+'''
+Set of functions to make a SSL request and get X.509 certificate.
+For some protocols it sends an extra commands. An exapmle:
+EHLO/STARTTLS commands for SMTP.
+'''
+
 import socket
 from typing import Tuple, List, Union
 import timeout_decorator
@@ -9,11 +15,25 @@ NoResult: list = []
 
 @timeout_decorator.timeout(TIMEOUT)
 def do_handshake_with_timeout(conn):
+    '''
+    A stock do_handshake() can't make stop on timeout. It hangs forever.
+    This function using timeout_decorator to change this behaviour.
+    '''
     conn.do_handshake()
 
-# Return: (err, list(x509))
 def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
         ) -> Tuple[str, List[crypto.X509]]:
+    '''
+    Get full certificates chain from a server. It respects timeouts.
+    Get:
+    hostname - for SNI we need a full server name (FQDN).
+    addresss - IP address of server as string.
+    port - a port as integer.
+    proto - protocol name (https, smtp etc.). It's need to know if we need
+            to send extra commands or not. If we don't need to send extra
+            commands it means we alrerady have SSL connection after connect().
+    Return: tuple(error, list(X509))
+    '''
     context = SSL.Context(method=SSL.SSLv23_METHOD)
 
     # open plain connection
@@ -67,9 +87,14 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
 
     return (Null, chain)
 
-# Return: (err, x509)
 def get_cert_from_server(hostname: str, addr: str, port: int, proto: str
         ) -> Tuple[str, Union[crypto.X509, None]]:
+    '''
+    Get only one certificate of the server. It's just a wrapper for
+    get_chain_from_server()[0].
+
+    Return: tuple(error, x509 or None)
+    '''
     (error, chain) = get_chain_from_server(hostname, addr, port, proto)
     if error:
         return (error, None)

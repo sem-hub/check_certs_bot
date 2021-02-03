@@ -1,3 +1,5 @@
+'''DNS utilities.'''
+
 import logging
 from typing import Dict, List
 import dns.dnssec
@@ -8,15 +10,25 @@ import dns.resolver
 TIMEOUT = 5
 
 def check_fqdn(fqdn: str) -> bool:
+    '''
+    Check FQDN with dnspython function. It prevent us from an exceptions in
+    get_dns_request() because of bad FQDN.
+    '''
     try:
         dns.name.from_text(fqdn)
     except Exception:
         return False
     return True
 
-# Return empty list if not found any
 def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False,
         only_first: bool = False) -> list:
+    '''
+    Get all DNS addresses for this FQDN.
+    Besides FQDN argument it takes a few flags:
+    only_ipv4, only_ipv6 and only_first. These flags explained in check_cert().
+
+    Return: list of IP addresses or an empty list if not found any.
+    '''
     # fqdn must be checked with check_fqdn() before
     dname = dns.name.from_text(fqdn)
 
@@ -37,6 +49,15 @@ def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False,
     return r
 
 def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
+    '''
+    Make arbitrary DNS request.
+    Get arguments:
+    dname - FQDN.
+    rtype - request type (A, AAAA, MX etc.).
+    quiet - Don't pollute output with anything.
+
+    Return: list of RR records (addresses or FQDNs for MX request etc.).
+    '''
     logger = logging.getLogger(__name__)
     result: list = []
     answers: list = []
@@ -53,9 +74,14 @@ def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
             result.append(rdata)
     return result
 
-# Returns: dict[zone] -> autority servers' adresses for the zone
-#                        only one elemeint in the dictionary always
 def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]:
+    '''
+    Get list of IP addresses for authority DNS server for this domain.
+    Need for get_dnssec_request().
+
+    Returns: dict[zone] -> autority servers' adresses for the zone
+             only one elemeint in the dictionary always
+    '''
     logger = logging.getLogger(__name__ + '.get_authority_ns_for')
     # Turn off debug for this function temporarly
     logger.setLevel(logging.INFO)
@@ -111,6 +137,10 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
     return authority
 
 def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
+    '''
+    Get any DNS request with DNSSEC checking.
+    See get_dns_request for arguments and return value.
+    '''
     logger = logging.getLogger(__name__ + '.get_dnssec_request')
     ns_list = get_authority_ns_for(dname, quiet)
     zone = list(ns_list.keys())[0]
@@ -191,6 +221,10 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     return result
 
 def get_tlsa_record(fqdn: str, port: int, quiet: bool = True) -> list:
+    '''
+    Construct and make DNS request for a TLSA record.
+    Return: list of TLSA records or an empty list.
+    '''
     rr_str = '_' + str(port) + '._tcp.' + fqdn
 
     # Ask for TLSA only with DNSSEC request

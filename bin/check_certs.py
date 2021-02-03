@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+'''
+A command line utility to run checks for an URL.
+It just processes arguments and pass them to check_certs_lib.check_cert().
+Use --help for allowed arguments.
+'''
+
 import argparse
 import logging
 

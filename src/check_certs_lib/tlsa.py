@@ -1,3 +1,7 @@
+'''
+Functions to make TLSA, reques it and check it.
+'''
+
 import hashlib
 import logging
 from typing import Tuple
@@ -8,6 +12,9 @@ from check_certs_lib.dns_requests import get_tlsa_record
 Null = ''
 
 def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> bytes:
+    '''
+    Construct a TLSA record.
+    '''
     if selector == 1:
         dump = crypto.dump_publickey(crypto.FILETYPE_ASN1, cert.get_pubkey())
     else:
@@ -22,9 +29,13 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> b
     m.update(dump)
     return m.digest()
 
-# Return (error, result)
 def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True
         ) -> Tuple[str, str]:
+    '''
+    Construct TLSA, request DNS TLSA record, compare them.
+
+    Return: tuple(error, result)
+    '''
     logger = logging.getLogger(__name__)
     answer = get_tlsa_record(fqdn, port, quiet=True)
 
