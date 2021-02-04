@@ -49,12 +49,14 @@ TOKEN_FILE = '/var/spool/check_certs/TOKEN'
 remote_messages: queue.Queue = queue.Queue()
 
 HELP_TEXT='''
-A bot for checking HTTP servers certificates.
+A bot for checking SSL/TLS servers certificates.
 
 Enter:
     \\[_protocol_://]_hostname_\\[:_port_] \\[no-tlsa] \\[no-ocsp]
 Default protocol and port is https(443)
+
 no-tlsa, no-ocsp flags dissallow TLSA, OCSP checks correspondly.
+
 Example:
     *www.google.ru* will check *https://www.google.ru:443*
 
@@ -62,15 +64,14 @@ or a command:
 /help   - show this help message.
 /list \\[short]  - list server names for periodic checking.
 /add \\[_protocol_://]_hostname_\\[:_port_] \\[_days_]   - add a server to periodical checking.
-                        _days_ - warn if days till certificate expire will happen.
-/hold \\[_protocol_://]_hostname_\\[_:port_]  - temporary stop checking this entry
-/unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry
+    _days_ - warn if days till certificate expire will happen.
+/hold \\[_protocol_://]_hostname_\\[_:port_]  - temporary stop checking this entry.
+/unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry.
 /remove \\[_protocol_://]hostname\\[:_port_] - remove a server from periodical checking list.
 /reset  - reset all periodical checking list.
 
-Allowed protocols from /etc/services
-For *smtp*, *smtps* and *submission* protocols you can specify domain name not FQDN. It will be
-checked for MX DNS records first.
+Allowed protocols: all from /etc/services.
+For mail protocols you can specify domain name not FQDN. It will be checked for MX DNS records first.
 For *smtp* protocol EHLO/STARTTLS commands will be send first to start TLS/SSL session.
 '''
 
