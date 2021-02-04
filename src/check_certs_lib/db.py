@@ -13,21 +13,21 @@ def dict_factory(cursor, row) -> dict:
     Row_factory function for sqlite3 module. It makes SELECT returns dict()
     Timestamps started with '0000-' returns as 'Never'
     '''
-    d = {}
+    res = {}
     for idx, col in enumerate(cursor.description):
-        if type(row[idx]) is str and row[idx].startswith('0000-'):
-            d[col[0]] = 'Never'
+        if isinstance(row[idx], str) and row[idx].startswith('0000-'):
+            res[col[0]] = 'Never'
         else:
-            d[col[0]] = row[idx]
-    return d
+            res[col[0]] = row[idx]
+    return res
 
 class DB:
     '''
     Class with function for making DB connection and requests.
-    You must not use this class directly. Create DB_factory class and get DB
+    You must not use this class directly. Create DBfactory class and get DB
     from it:
 
-    db_factory = DB_factory()
+    db_factory = DBfactory()
     my_db = db_factory.get_db('my_table', 'my_db')
     '''
     def __init__(self, table: str, db_con):
@@ -54,7 +54,7 @@ class DB:
 
         Return ROWs as a list of tuples of values.
         '''
-        self.logger.debug(f'SELECT {what} FROM {self.table} WHERE {where}')
+        self.logger.debug('SELECT %s FROM %s WHERE %s', what, self.table, where)
         cur = self.con.cursor()
         cur.execute(f'SELECT {what} FROM {self.table} WHERE {where}')
         return cur.fetchall()
@@ -68,11 +68,11 @@ class DB:
         INSERT INTO {self.table} ({fields}) VALUES ({values})
         '''
         if fields in (None, ''):
-            self.logger.debug(f'INSERT INTO {self.table} VALUES ({values})')
+            self.logger.debug('INSERT INTO %s VALUES (%s)', self.table, values)
             cur = self.con.cursor()
             cur.execute(f'INSERT INTO {self.table} VALUES ({values})')
         else:
-            self.logger.debug(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
+            self.logger.debug('INSERT INTO %s (%s) VALUES (%s)', self.table, fields, values)
             cur = self.con.cursor()
             cur.execute(f'INSERT INTO {self.table} ({fields}) VALUES ({values})')
         self.con.commit()
@@ -82,7 +82,7 @@ class DB:
         Get 'what' and 'where':
         UPDATE {self.table} SET {what} WHERE {where}
         '''
-        self.logger.debug(f'UPDATE {self.table} SET {what} WHERE {where}')
+        self.logger.debug('UPDATE %s SET %s WHERE %s', self.table, what, where)
         cur = self.con.cursor()
         cur.execute(f'UPDATE {self.table} SET {what} WHERE {where}')
         self.con.commit()
@@ -92,14 +92,14 @@ class DB:
         Get 'where' argument:
         DELETE FROM {self.table} WHERE {where}
         '''
-        self.logger.debug(f'DELETE FROM {self.table} WHERE {where}')
+        self.logger.debug('DELETE FROM %s WHERE %s', self.table, where)
         cur = self.con.cursor()
         cur.execute(f'DELETE FROM {self.table} WHERE {where}')
         self.con.commit()
 
-class DB_factory:
+class DBfactory:
     '''
-    DB_factory construct DB objects. Some of them can share one connection.
+    DBfactory construct DB objects. Some of them can share one connection.
     This class creates DB classes and share connection between them if possible.
     For different DB filles will created different connections.
     '''

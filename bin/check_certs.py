@@ -60,7 +60,7 @@ if __name__ == '__main__':
     if '://' not in url:
         url = 'https://' + url
 
-    logging.debug(f'url={url}')
+    logging.debug('url=%s', url)
 
     error, result = check_cert(url, **flags)
     print(result, end='')

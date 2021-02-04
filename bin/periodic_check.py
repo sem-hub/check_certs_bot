@@ -14,80 +14,88 @@ from multiprocessing import Pool
 import re
 
 from check_certs_lib.check_certs import check_cert
-from check_certs_lib.db import DB_factory
+from check_certs_lib.db import DBfactory
 from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 from check_certs_lib.send_to_chat import send_to_chats
 
 
 def check_process_closure(db, dry_run: bool):
     '''A closure to hide arguments. Multiprocess function takes only one.'''
-    global helper       # it's a dirty hack to prevent "Can't picle local object" error in multiprocessing module
-    def helper(fields: tuple):
-        return process_checking(db, dry_run, fields)
+    global helper       # it's a dirty hack to prevent "Can't picle local object"
+                        # error in multiprocessing module
+    def helper(args: tuple):
+        return process_checking(db, dry_run, args)
     return helper
 
-def process_checking(db, dry_run, rt: tuple) -> dict:
-    '''Run all checks via check_certs_lib.check_cert()'''
-    r = rt[1]
-    logging.debug(f'{r["url"]}')
-    if r['status'] == 'HOLD':
+def process_checking(db, dry_run, args: tuple) -> dict:
+    '''
+    Run all checks via check_certs_lib.check_cert()
+    Get: DB handler, dry_run flag, enumerate() tuple
+    Return: dict() with cert_id, url, chat_id, count,
+                        error, out_text keys.
+    '''
+    col = args[1]
+    logging.debug('%s', col["url"])
+    if col['status'] == 'HOLD':
         logging.debug('Skipped')
         return dict()
 
     res = dict()
-    res['cert_id'] = r['cert_id']
-    res['url'] = r['url']
-    res['chat_id'] = r['chat_id']
-    res['count'] = r['count']
+    res['cert_id'] = col['cert_id']
+    res['url'] = col['url']
+    res['chat_id'] = col['chat_id']
+    res['count'] = col['count']
     res['error'], res['out_text'] = check_cert(
-            r['url'],
+            col['url'],
             quiet=True,
             print_id=True,
-            warn_before_expired=r['warn_before_expired'],
+            warn_before_expired=col['warn_before_expired'],
             only_one=True)
     if not dry_run:
         process_results(db, res)
     return res
 
-def process_results(servers_db, r: dict) -> None:
+def process_results(servers_db, res: dict) -> None:
     '''Process results, save it to DB etc.'''
-    if not r:
+    if not res:
         return
     # we have more than one user for this url
-    users = [r['chat_id']]
-    if r['count']:
-        users = [v['chat_id'] for v in servers_db.select('chat_id', f'url={r["url"]!r}')]
-    if r['error']:
-        result = r['out_text']+r['error']
+    users = [res['chat_id']]
+    if res['count']:
+        users = [v['chat_id'] for v in servers_db.select('chat_id', f'url={res["url"]!r}')]
+    if res['error']:
+        result = res['out_text']+res['error']
     else:
-        result = r['out_text']
-    if type(result) == bytes:
+        result = res['out_text']
+    if isinstance(result, bytes):
         result = result.decode('utf-8')
     result = result.strip('\n')
-    m = re.search('ID: ([0-9A-Z]+)\n?', result)
-    if m is None:
-        send_to_chats(f'{r["url"]} check certificate error:\n{result}', users)
-        logging.debug(f'Error: |{result}|')
-        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}', f'url={r["url"]!r}')
+    match = re.search('ID: ([0-9A-Z]+)\n?', result)
+    if match is None:
+        send_to_chats(f'{res["url"]} check certificate error:\n{result}', users)
+        logging.debug('Error: |%s|', result)
+        servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}',
+                f'url={res["url"]!r}')
         return
-    cert_id = m.group(1)
+    cert_id = match.group(1)
     result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
     if result != '':
-        send_to_chats(f'{r["url"]} check certificate error:\n{result}', users)
-        logging.debug(f'Error*: {result}')
+        send_to_chats(f'{res["url"]} check certificate error:\n{result}', users)
+        logging.debug('Error*: %s', result)
         servers_db.update(f'last_checked=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',
-                f'url={r["url"]!r}')
+                f'url={res["url"]!r}')
     else:
         # It's a first check or certificate did not changed
-        if r['cert_id'] == '0' or cert_id == r['cert_id']:
+        if res['cert_id'] == '0' or cert_id == res['cert_id']:
             result = 'OK'
         else:
             result = 'Certificate was changed'
-            send_to_chats(f'{r["url"]} check certificate:\n{result}', users)
-        logging.debug(f'{result}')
+            send_to_chats(f'{res["url"]} check certificate:\n{result}', users)
+        logging.debug('%s', result)
         servers_db.update(
-                f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status={result!r}, cert_id={cert_id!r}',
-                f'url={r["url"]!r}')
+                f'last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, '
+                f'status={result!r}, cert_id={cert_id!r}',
+                f'url={res["url"]!r}')
 
 def main():
     '''Main function'''
@@ -104,7 +112,7 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    db_factory = DB_factory()
+    db_factory = DBfactory()
     servers_db = db_factory.get_db('servers')
     res = servers_db.select('*, COUNT(url) AS count', 'true GROUP BY url')
 

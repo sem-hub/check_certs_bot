@@ -13,7 +13,7 @@ from check_certs_lib.ocsp import check_ocsp
 
 
 MAIL_PROTO = ('smtp', 'smtps', 'submission')
-Null = ''
+NULL = ''
 
 # Return (error, result)
 def check_cert(url_str: str, **flags) -> Tuple[str, str]:
@@ -57,11 +57,11 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
 
     error, (proto, fqdn, port) = parse_and_check_url(url_str)
     if error:
-        return (error, Null)
+        return (error, NULL)
     if not check_fqdn(fqdn):
-        return (f'Host name is invalid: {fqdn}\n', Null)
+        return (f'Host name is invalid: {fqdn}\n', NULL)
 
-    logger.debug(f'{proto} {fqdn} {port}')
+    logger.debug('%s %s %s', proto, fqdn, port)
 
     addresses: list = []
     error_msg: str = ''
@@ -85,7 +85,7 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
 
     if len(addresses) == 0:
         error_msg += f'No address records found for {fqdn}\n'
-        return (error_msg, Null)
+        return (error_msg, NULL)
     if not quiet:
         message += f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
 

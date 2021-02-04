@@ -21,7 +21,7 @@ The bot supports this commands:
 
 An user can see only URLs he added.
 The bot saves all user activity. It checks for flood and block them.
-An administrator can mark user as banned and all commands will be 
+An administrator can mark user as banned and all commands will be
 rejected for him.
 '''
 
@@ -40,7 +40,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
-from check_certs_lib.db import DB_factory
+from check_certs_lib.db import DBfactory
 import check_certs_lib.db_schemas as db_schemas
 
 
@@ -61,14 +61,16 @@ Example:
 or a command:
 /help   - show this help message.
 /list \\[short]  - list server names for periodic checking.
-/add \\[_protocol_://]_hostname_\\[:_port_] \\[_days_]   - add a server to periodical checking. _days_ - warn if days till certificate expire will happen.
+/add \\[_protocol_://]_hostname_\\[:_port_] \\[_days_]   - add a server to periodical checking.
+                        _days_ - warn if days till certificate expire will happen.
 /hold \\[_protocol_://]_hostname_\\[_:port_]  - temporary stop checking this entry
 /unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry
 /remove \\[_protocol_://]hostname\\[:_port_] - remove a server from periodical checking list.
 /reset  - reset all periodical checking list.
 
 Allowed protocols from /etc/services
-For *smtp*, *smtps* and *submission* protocols you can specify domain name not FQDN. It will be checked for MX DNS records first.
+For *smtp*, *smtps* and *submission* protocols you can specify domain name not FQDN. It will be
+checked for MX DNS records first.
 For *smtp* protocol EHLO/STARTTLS commands will be send first to start TLS/SSL session.
 '''
 
@@ -96,8 +98,8 @@ def send_message_to_user(bot, **kwargs) -> None:
         try:
             bot.send_message(**kwargs)
             success = True
-        except Exception as e:
-            logging.error(str(e))
+        except Exception as err:
+            logging.error(str(err))
         attemps += 1
 
 def send_long_message(bot, chat_id, text: str) -> None:
@@ -162,7 +164,7 @@ class CheckCertBot:
         # Run job every 10 seconds
         job_queue.run_repeating(check_queue, interval=10, first=10)
 
-        self.db_factory = DB_factory()
+        self.db_factory = DBfactory()
         self.servers_db = self.db_factory.get_db('servers')
         self.servers_db.create(db_schemas.servers_create_statement)
         self.users_db = self.db_factory.get_db('users')
@@ -175,23 +177,30 @@ class CheckCertBot:
         res = self.users_db.select('*', f'id={message.chat_id}')
         # A new user
         if len(res) == 0:
-            self.users_db.insert('id, name, full_name, language_code, first_met, last_activity',
-                    f'"{message.chat_id}", "{message.chat.username}", "{message.chat.first_name} {message.chat.last_name}", "{message.from_user.language_code}", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
+            self.users_db.insert(
+                    'id, name, full_name, language_code, first_met, last_activity',
+                    f'"{message.chat_id}", "{message.chat.username}", '
+                    f'"{message.chat.first_name} {message.chat.last_name}", '
+                    f'"{message.from_user.language_code}", '
+                    'CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
         else:
             if res[0]['status'] == 'ban':
-                logging.warning(f'banned: {message.chat_id}. {cmd}.')
+                logging.warning('banned: %s. %s.', message.chat_id, cmd)
                 return False
 
             # Check for flooding
-            r = self.activity_db.select('*',
-                    f'user_id={message.chat_id!r} and date={datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")!r}')
+            rows = self.activity_db.select('*',
+                    f'user_id={message.chat_id!r} and '
+                    f'date={datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")!r}')
             # Flood protect
-            if len(r) > 0:
+            if len(rows) > 0:
                 self.activity_db.insert('user_id, cmd, date',
                         f'{message.chat_id!r}, {"!"+cmd!r}, CURRENT_TIMESTAMP')
-                logging.warning(f'Flood activity: {message.chat_id} - {len(r)}. Blocked.')
+                logging.warning('Flood activity: %s - %d times per seconds. Blocked.',
+                                        message.chat_id, len(rows))
                 return False
-            self.users_db.update('last_activity=CURRENT_TIMESTAMP', f'id={message.chat_id!r}')
+            self.users_db.update('last_activity=CURRENT_TIMESTAMP',
+                                 f'id={message.chat_id!r}')
         # Write his activity
         self.activity_db.insert('user_id, cmd, date',
                 f'{message.chat_id!r}, {cmd!r}, CURRENT_TIMESTAMP')
@@ -212,16 +221,21 @@ class CheckCertBot:
 
         # Remove ReplyKeyboard if it was there
         #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
-        #old_message = context.bot.send_message(chat_id=update.message.chat_id, text='trying', reply_markup=reply_markup, reply_to_message_id=update.message.message_id)
+        #old_message = context.bot.send_message(chat_id=update.message.chat_id,
+        #       text='trying', reply_markup=reply_markup,
+        #       reply_to_message_id=update.message.message_id)
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     parse_mode='Markdown', text=HELP_TEXT)
 
     def id_cmd(self, update, context) -> None:
         '''Process /id command'''
         if not self.user_access('/id', update.message):
-            send_message_to_user(context.bot, chat_id=update.message.chat_id, text='You are banned')
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+                    text='You are banned')
             return
-        text = f'{update.message.chat_id}: {update.message.chat.username} {update.message.chat.first_name} {update.message.chat.last_name} {update.message.from_user.language_code}'
+        text = (f'{update.message.chat_id}: {update.message.chat.username} '
+                f'{update.message.chat.first_name} {update.message.chat.last_name} '
+                f'{update.message.from_user.language_code}')
         send_message_to_user(context.bot, chat_id=update.message.chat_id, text=text)
 
     def list_cmd(self, update, context) -> None:
@@ -234,10 +248,14 @@ class CheckCertBot:
         if len(args) > 0 and args[0] == 'short':
             short = True
         if short:
-            res = self.servers_db.select('url, datetime(last_checked, "localtime") as last_checked, status',
+            res = self.servers_db.select(
+                    'url, datetime(last_checked, "localtime") as last_checked, status',
                     f'chat_id="{str(update.message.chat_id)}"')
         else:
-            res = self.servers_db.select('datetime(when_added, "localtime") as when_added, url, warn_before_expired, datetime(last_checked, "localtime") as last_checked, status',
+            res = self.servers_db.select(
+                    'datetime(when_added, "localtime") as when_added, url, '
+                    'warn_before_expired, '
+                    'datetime(last_checked, "localtime") as last_checked, status',
                     f'chat_id="{str(update.message.chat_id)}"')
 
         output = list()
@@ -247,8 +265,8 @@ class CheckCertBot:
             line = '|'.join([str(elem) for elem in res[0].keys()])
             output.append('<b>' + line + '</b>')
 
-        for r in res:
-            line = '|'.join([str(elem) for elem in r.values()])
+        for row in res:
+            line = '|'.join([str(elem) for elem in row.values()])
             # Strip start/stop tag characters
             line = line.replace('<', '').replace('>', '')
             output.append(line)
@@ -283,11 +301,15 @@ class CheckCertBot:
         res = self.servers_db.select('url',
                 f'url="{url}" AND chat_id="{str(update.message.chat_id)}"')
         if len(res) > 0:
-            send_message_to_user(context.bot, chat_id=update.message.chat_id, disable_web_page_preview=1, text=f'{url} already exists')
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+                    disable_web_page_preview=1, text=f'{url} already exists')
             return
         # datetime('Never', 'localtime') == NoneType. So I use 0000-01-01 00:00:00 as 'never' value.
-        self.servers_db.insert('when_added, url, chat_id, warn_before_expired, last_checked, last_ok, status, cert_id',
-                f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", "{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
+        self.servers_db.insert(
+                'when_added, url, chat_id, warn_before_expired, last_checked, '
+                'last_ok, status, cert_id',
+                f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", '
+                f'"{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Successfully added: {url}')
@@ -298,7 +320,8 @@ class CheckCertBot:
         if not self.user_access(f'/hold {args}', update.message):
             return
         if len(args) < 1:
-            send_message_to_user(context.bot, chat_id=update.message.chat_id, text='Use /hold URL')
+            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+                                 text='Use /hold URL')
             return
         error, url = parse_url(args[0])
         if error != '':
@@ -348,7 +371,8 @@ class CheckCertBot:
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
-        self.servers_db.delete(f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
+        self.servers_db.delete(
+                f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Successfully removed: {url}')
@@ -389,12 +413,12 @@ class CheckCertBot:
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Checking certificate for: {url}')
-        p = Process(target=async_run_func, args=(context.bot,
-                                                 update.message.chat_id,
-                                                 self.servers_db,
-                                                 url,
-                                                 *args))
-        p.start()
+        proc = Process(target=async_run_func, args=(context.bot,
+                                                     update.message.chat_id,
+                                                     self.servers_db,
+                                                     url,
+                                                     *args))
+        proc.start()
 
 def async_run_func(bot, chat_id, db, url, *args) -> None:
     '''Run checks for the URL as an async job'''
@@ -427,9 +451,9 @@ def main() -> NoReturn:
     rpyc_log = logging.getLogger('RPYC')
     rpyc_log.setLevel(logging.ERROR)
     rpyc_server = ThreadedServer(RPyCService, port=18861, logger=rpyc_log)
-    t = threading.Thread(target = rpyc_server.start)
-    t.daemon = True
-    t.start()
+    thr = threading.Thread(target = rpyc_server.start)
+    thr.daemon = True
+    thr.start()
 
     token = open(TOKEN_FILE, 'r').read().rstrip('\n')
     bot = CheckCertBot(token)

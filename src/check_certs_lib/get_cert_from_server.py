@@ -12,7 +12,7 @@ import timeout_decorator
 
 
 TIMEOUT = 5
-Null = ''
+NULL = ''
 NoResult: list = []
 
 @timeout_decorator.timeout(TIMEOUT)
@@ -42,10 +42,10 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
     s_type = socket.AF_INET
     if ':' in addr:
         s_type = socket.AF_INET6
-    s = socket.socket(s_type)
-    s.settimeout(TIMEOUT)
+    sock = socket.socket(s_type)
+    sock.settimeout(TIMEOUT)
 
-    conn = SSL.Connection(context=context, socket=s)
+    conn = SSL.Connection(context=context, socket=sock)
     try:
         conn.connect((addr, port))
     except Exception as msg:
@@ -54,23 +54,23 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
     try:
         # Send extracommands if required by proto. Ignore server answer.
         if proto == 'smtp':
-            s.recv(500)
-            s.send(b'EHLO gmail.com\r\n')
-            s.recv(500)
-            s.send(b'STARTTLS\r\n')
-            s.recv(500)
+            sock.recv(500)
+            sock.send(b'EHLO gmail.com\r\n')
+            sock.recv(500)
+            sock.send(b'STARTTLS\r\n')
+            sock.recv(500)
         if proto == 'imap':
-            s.recv(500)
-            s.send(b'. STARTTLS\r\n')
-            s.recv(500)
+            sock.recv(500)
+            sock.send(b'. STARTTLS\r\n')
+            sock.recv(500)
         if proto == 'ftp':
-            s.recv(500)
-            s.send(b'AUTH TLS\r\n')
-            s.recv(500)
+            sock.recv(500)
+            sock.send(b'AUTH TLS\r\n')
+            sock.recv(500)
         if proto == 'pop3':
-            s.recv(500)
-            s.send(b'STLS\r\n')
-            s.recv(500)
+            sock.recv(500)
+            sock.send(b'STLS\r\n')
+            sock.recv(500)
     except Exception as err:
         return (f'send/recv error: {str(err)}', NoResult)
 
@@ -87,7 +87,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
     if not chain:
         return(f'{addr}: Get certificate chain error', NoResult)
 
-    return (Null, chain)
+    return (NULL, chain)
 
 def get_cert_from_server(hostname: str, addr: str, port: int, proto: str
         ) -> Tuple[str, Union[crypto.X509, None]]:
@@ -100,4 +100,4 @@ def get_cert_from_server(hostname: str, addr: str, port: int, proto: str
     (error, chain) = get_chain_from_server(hostname, addr, port, proto)
     if error:
         return (error, None)
-    return (Null, chain[0])
+    return (NULL, chain[0])

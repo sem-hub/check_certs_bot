@@ -9,7 +9,7 @@ from OpenSSL import crypto
 from ocspchecker import ocspchecker
 
 
-Null = ''
+NULL = ''
 
 # Return (error, result)
 def check_ocsp(cert_chain: list) -> Tuple[str, str]:
@@ -25,21 +25,21 @@ def check_ocsp(cert_chain: list) -> Tuple[str, str]:
     try:
         ocsp_url = ocspchecker.extract_ocsp_url(cert_str_list)
     except Exception as err:
-        return (str(err), Null)
+        return (str(err), NULL)
 
     try:
         ocsp_request = ocspchecker.build_ocsp_request(cert_str_list)
     except Exception as err:
-        return (str(err), Null)
+        return (str(err), NULL)
 
     try:
         ocsp_response = ocspchecker.get_ocsp_response(ocsp_url, ocsp_request)
     except Exception as err:
-        return (str(err), Null)
+        return (str(err), NULL)
 
     try:
         ocsp_result = ocspchecker.extract_ocsp_result(ocsp_response)
     except Exception as err:
-        return (str(err), Null)
+        return (str(err), NULL)
 
-    return (Null, ocsp_result.replace('OCSP Status: ', ''))
+    return (NULL, ocsp_result.replace('OCSP Status: ', ''))

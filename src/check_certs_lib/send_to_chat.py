@@ -17,5 +17,5 @@ def send_to_chats(msg: str, chat_ids: list):
         for chat_id in chat_ids:
             rcon.root.add_message(chat_id, msg)
     except ConnectionError as error:
-        logger.error(f'Connection to chat server error: {str(error)}')
+        logger.error('Connection to chat server error: %s', str(error))
         logger.info(msg)

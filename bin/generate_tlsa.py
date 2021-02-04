@@ -21,7 +21,7 @@ def tlsa(url: str):
         return err
     if not check_fqdn(fqdn):
         return f'Host name is invalid: {fqdn}\n'
-    logging.debug(f'{proto} {fqdn} {port}')
+    logging.debug('%s %s %s', proto, fqdn, port)
 
     addr = get_dns_request(fqdn, 'A', False)
     if len(addr) == 0:

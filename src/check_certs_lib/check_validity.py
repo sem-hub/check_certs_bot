@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 # Some shortenings for return values.
 NoResult = ('', '', 0)
-Null = ''
+NULL = ''
 
 def is_valid_fqdn(fqdn: str) -> bool:
     '''
@@ -53,4 +53,4 @@ def parse_and_check_url(url_str: str) -> Tuple[str, Tuple[str, str, int]]:
     if not is_valid_fqdn(fqdn):
         return (f'Hostname parse error: {fqdn}\n', NoResult)
 
-    return (Null, (scheme, fqdn, port))
+    return (NULL, (scheme, fqdn, port))

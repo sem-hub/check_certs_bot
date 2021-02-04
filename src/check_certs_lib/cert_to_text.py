@@ -53,35 +53,35 @@ def strip_subject(subj) -> str:
     res = res.replace('<', '')
     return res.replace('>', '')
 
-def decode_generalized_time(gt: bytes) -> datetime:
+def decode_generalized_time(gtime: bytes) -> datetime:
     '''Decode byte string as generalized time (UTC).'''
-    return datetime.strptime(gt.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
+    return datetime.strptime(gtime.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
 
-def list_of_tuples(indent: str, lt: tuple) -> str:
+def list_of_tuples(indent: str, tuples: tuple) -> str:
     '''Return tuple as sting. Try to decode well known (RFC2253) x500 attribute codes.'''
     text: list = []
-    d = {'C': 'countryName',
-         'O': 'organizationName',
-         'ST': 'stateOrProvinceName',
-         'L': 'localityName',
-         'OU': 'organizationUnitName',
-         'CN': 'commonName'
-        }
-    for (name, val) in lt:
-        if name in d.keys():
-            text.append(indent + d[name] + ': ' + val.decode('utf8'))
+    codes = {'C': 'countryName',
+             'O': 'organizationName',
+             'ST': 'stateOrProvinceName',
+             'L': 'localityName',
+             'OU': 'organizationUnitName',
+             'CN': 'commonName'
+            }
+    for (name, val) in tuples:
+        if name in codes.keys():
+            text.append(indent + codes[name] + ': ' + val.decode('utf8'))
         else:
             text.append(indent + name.decode('utf8') + ': ' + val.decode('utf8'))
 
     return '\n'.join(map(str, text))
 
-def x509_alt_names(indent: str, st: str) -> str:
+def x509_alt_names(indent: str, anames: str) -> str:
     '''Convert alternate names to string.'''
     text: list = []
-    for s in st.split(','):
-        s = s.replace(' ', '')
-        s = s.replace(':', ': ')
-        text.append(f'{indent}{s}')
+    for line in anames.split(','):
+        line = line.replace(' ', '')
+        line = line.replace(':', ': ')
+        text.append(f'{indent}{line}')
 
     return '\n'.join(map(str, text))
 

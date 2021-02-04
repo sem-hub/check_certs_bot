@@ -32,8 +32,8 @@ def get_domains_from_cert(cert: crypto.X509) -> Set[str]:
         if cert.get_extension(i).get_short_name() == b'subjectAltName':
             alt_names = str(cert.get_extension(i))
             if ',' in alt_names:
-                for ds in alt_names.split(', '):
-                    domains.add(ds.replace('DNS:', ''))
+                for line in alt_names.split(', '):
+                    domains.add(line.replace('DNS:', ''))
             else:
                 domains.add(alt_names.replace('DNS:', ''))
 
@@ -45,12 +45,12 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
     Return: a boolian.
     '''
     domains = get_domains_from_cert(cert)
-    for d in domains:
-        if fqdn == d:
+    for domain in domains:
+        if fqdn == domain:
             return True
-        if '*' in d:
-            rx= '^' + d.replace('.',r'\.').replace('*',r'[^\.]+') + '$'
-            rec = re.compile(rx)
+        if '*' in domain:
+            rxp = '^' + domain.replace('.',r'\.').replace('*',r'[^\.]+') + '$'
+            rec = re.compile(rxp)
             if rec.match(fqdn):
                 return True
     return False
@@ -63,7 +63,7 @@ def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
     '''
     error: str = ''
     store = crypto.X509Store()
-    if type(certs_to_check) == list:
+    if isinstance(certs_to_check, list):
         certs = certs_to_check.copy()
         cert = certs.pop(0)
         # Recursive check all certificates in the chain
@@ -75,10 +75,10 @@ def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
         cert = certs_to_check
 
     # Read CA cetrs from a bundle
-    with open(certifi.where(), 'rb') as f:
-        raw_ca = f.read()
-    for ca in pem.parse(raw_ca):
-        store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM, str(ca)))
+    with open(certifi.where(), 'rb') as ca_f:
+        raw_ca = ca_f.read()
+    for ca_cert in pem.parse(raw_ca):
+        store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM, str(ca_cert)))
 
 # Need we very strict checking flags?
 #    store.set_flags(crypto.X509StoreFlags.X509_STRICT |

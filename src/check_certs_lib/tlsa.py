@@ -11,7 +11,7 @@ from OpenSSL import crypto
 from check_certs_lib.dns_requests import get_tlsa_record
 
 
-Null = ''
+NULL = ''
 
 def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> bytes:
     '''
@@ -25,11 +25,11 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> b
     if mtype == 0:
         return dump
     if mtype == 1:
-        m = hashlib.sha256()
+        sha = hashlib.sha256()
     if mtype == 2:
-        m = hashlib.sha512()
-    m.update(dump)
-    return m.digest()
+        sha = hashlib.sha512()
+    sha.update(dump)
+    return sha.digest()
 
 def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True
         ) -> Tuple[str, str]:
@@ -39,20 +39,20 @@ def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True
     Return: tuple(error, result)
     '''
     logger = logging.getLogger(__name__)
-    answer = get_tlsa_record(fqdn, port, quiet=True)
+    answers = get_tlsa_record(fqdn, port, quiet=True)
 
-    if len(answer) == 0:
-        return ('not found', Null)
+    if len(answers) == 0:
+        return ('not found', NULL)
     result = False
-    for a in answer:
-        if a.usage not in (1, 3):
+    for answ in answers:
+        if answ.usage not in (1, 3):
             if not quiet:
                 logger.error('Only usage type 1 or 3 are supported')
             continue
 
-        tlsa = generate_tlsa(cert, a.usage, a.selector, a.mtype)
-        result = a.cert == tlsa
+        tlsa = generate_tlsa(cert, answ.usage, answ.selector, answ.mtype)
+        result = answ.cert == tlsa
 
     if result:
-        return (Null, 'OK')
-    return ('not match', Null)
+        return (NULL, 'OK')
+    return ('not match', NULL)

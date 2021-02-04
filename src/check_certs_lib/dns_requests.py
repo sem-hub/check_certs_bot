@@ -35,20 +35,20 @@ def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False,
     dname = dns.name.from_text(fqdn)
 
     if only_ipv4:
-        a1: list = []
+        ipv6: list = []
     else:
-        a1 = get_dns_request(dname, 'AAAA')
+        ipv6 = get_dns_request(dname, 'AAAA')
     if only_ipv6:
-        a2: list = []
+        ipv4: list = []
     else:
-        a2 = get_dns_request(dname, 'A')
+        ipv4 = get_dns_request(dname, 'A')
 
-    r: list = []
-    for rdata in a1 + a2:
-        r.append(rdata.to_text())
+    res: list = []
+    for rdata in ipv6 + ipv4:
+        res.append(rdata.to_text())
         if only_first:
             break
-    return r
+    return res
 
 def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
     '''
@@ -67,7 +67,7 @@ def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
         if not quiet:
-            logger.warning(f'No DNS record {rtype} found for {dname}')
+            logger.warning('No DNS record %s found for %s', rtype, dname)
         return []
     except dns.resolver.NoAnswer:
         pass
@@ -115,7 +115,7 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
         # We tried all nameservers and got errors for each
         if response.rcode() != dns.rcode.NOERROR:
             if not quiet:
-                logger.debug(f'All DNS queried and all returned error for {dname}')
+                logger.debug('All DNS queried and all returned error for %s', dname)
             return authority
 
         rrset = None
@@ -128,9 +128,9 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
         for rr in rrset:
             if rr.rdtype == dns.rdatatype.NS:
                 aserver = rr.target
-                logger.debug(f'{aserver} is authoritative for {sdomain}')
-                for r in default_resolver.resolve(aserver).rrset:
-                    ns.append(r.to_text())
+                logger.debug('%s is authoritative for %s', aserver, sdomain)
+                for ns_addr in default_resolver.resolve(aserver).rrset:
+                    ns.append(ns_addr.to_text())
         if len(ns) > 0:
             nameservers = ns
             authority.clear()
@@ -168,11 +168,11 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
         i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
-            logger.error(f'zone {zone} resolve error')
+            logger.error('zone %s resolve error', zone)
         return []
     if len(response.answer) != 2:
         if not quiet:
-            logger.error(f'zone {zone} is not signed')
+            logger.error('zone %s is not signed', zone)
         return []
     answer = response.answer
     dnskey = answer[0]
@@ -183,7 +183,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
         dns.dnssec.validate(dnskey, answer[1], {zname: dnskey})
     except dns.dnssec.ValidationFailure:
         if not quiet:
-            logger.error(f'zone {zone} signature error')
+            logger.error('zone %s signature error', zone)
         return []
 
     name = dns.name.from_text(dname)
@@ -202,18 +202,18 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
         i += 1
     if response.rcode() != dns.rcode.NOERROR:
         if not quiet:
-            logger.error(f'{dname} resolve error')
+            logger.error('%s resolve error', dname)
         return []
     if len(response.answer) < 2:
         if not quiet:
-            logger.error(f'{dname} is not signed')
+            logger.error('%s is not signed', dname)
         return []
     answer = response.answer
     try:
         dns.dnssec.validate(answer[0], answer[1], {zname: dnskey})
     except dns.dnssec.ValidationFailure:
         if not quiet:
-            logger.error(f'\'{rtype}\' record for {dname} signature error')
+            logger.error('"%s" record for %s signature error', rtype, dname)
         return []
 
     result: list = []
