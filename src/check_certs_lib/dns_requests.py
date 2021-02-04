@@ -100,29 +100,29 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
         query = dns.message.make_query(sdomain, dns.rdatatype.NS)
         response = None
         try:
-            response = dns.query.udp(query, nameservers[0], timeout=TIMEOUT)
+            response = dns.query.udp_with_fallback(query, nameservers[0], timeout=TIMEOUT)
         except Exception as err:
             logger.error(str(err))
             break
         i = 1
-        while response.rcode() != dns.rcode.NOERROR and i < len(nameservers):
+        while response[0].rcode() != dns.rcode.NOERROR and i < len(nameservers):
             try:
-                response = dns.query.udp(query, nameservers[i], timeout=TIMEOUT)
+                response = dns.query.udp_with_fallback(query, nameservers[i], timeout=TIMEOUT)
             except Exception as err:
                 logger.error(str(err))
                 break
             i += 1
         # We tried all nameservers and got errors for each
-        if response.rcode() != dns.rcode.NOERROR:
+        if response[0].rcode() != dns.rcode.NOERROR:
             if not quiet:
                 logger.debug('All DNS queried and all returned error for %s', dname)
             return authority
 
         rrset = None
-        if len(response.authority) > 0:
-            rrset = response.authority[0]
+        if len(response[0].authority) > 0:
+            rrset = response[0].authority[0]
         else:
-            rrset = response.answer[0]
+            rrset = response[0].answer[0]
 
         ns: List[str] = []
         for rr in rrset:
@@ -151,30 +151,30 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     nsaddr = ns_list[zone]
     response = None
     try:
-        response = dns.query.udp(request, nsaddr[0], timeout=TIMEOUT)
+        response = dns.query.udp_with_fallback(request, nsaddr[0], timeout=TIMEOUT)
     except Exception as err:
         logger.error(str(err))
         return []
     i = 1
     # Try all servers if any error occured
-    while response.rcode() != dns.rcode.NOERROR and \
-          len(response.answer) != 2 and \
+    while response[0].rcode() != dns.rcode.NOERROR and \
+          len(response[0].answer) != 2 and \
           i < len(nsaddr):
         try:
-            response = dns.query.udp(request, nsaddr[i], timeout=TIMEOUT)
+            response = dns.query.udp_with_fallback(request, nsaddr[i], timeout=TIMEOUT)
         except Exception as err:
             logger.error(str(err))
             break
         i += 1
-    if response.rcode() != dns.rcode.NOERROR:
+    if response[0].rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error('zone %s resolve error', zone)
         return []
-    if len(response.answer) != 2:
+    if len(response[0].answer) != 2:
         if not quiet:
             logger.error('zone %s is not signed', zone)
         return []
-    answer = response.answer
+    answer = response[0].answer
     dnskey = answer[0]
 
     # check zone signature
@@ -189,26 +189,26 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     name = dns.name.from_text(dname)
     request = dns.message.make_query(name, rtype, want_dnssec=True)
     try:
-        response = dns.query.udp(request, nsaddr[0], timeout=TIMEOUT)
+        response = dns.query.udp_with_fallback(request, nsaddr[0], timeout=TIMEOUT)
     except Exception as err:
         logger.debug(str(err))
         return []
     i = 1
     # Try all servers if any error occured
-    while response.rcode() != dns.rcode.NOERROR and \
-          len(response.answer) < 2 and \
+    while response[0].rcode() != dns.rcode.NOERROR and \
+          len(response[0].answer) < 2 and \
           i < len(nsaddr):
-        response = dns.query.udp(request, nsaddr[i])
+        response = dns.query.udp_with_fallback(request, nsaddr[i])
         i += 1
-    if response.rcode() != dns.rcode.NOERROR:
+    if response[0].rcode() != dns.rcode.NOERROR:
         if not quiet:
             logger.error('%s resolve error', dname)
         return []
-    if len(response.answer) < 2:
+    if len(response[0].answer) < 2:
         if not quiet:
             logger.error('%s is not signed', dname)
         return []
-    answer = response.answer
+    answer = response[0].answer
     try:
         dns.dnssec.validate(answer[0], answer[1], {zname: dnskey})
     except dns.dnssec.ValidationFailure:
