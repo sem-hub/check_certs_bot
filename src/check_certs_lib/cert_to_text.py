@@ -4,6 +4,7 @@ from datetime import datetime
 
 from OpenSSL import crypto
 from pytz import UTC
+from tzlocal import get_localzone
 
 
 # Text markups
@@ -52,6 +53,15 @@ def strip_subject(subj) -> str:
     res = str(subj)
     res = res.replace('<', '')
     return res.replace('>', '')
+
+def utc_to_local(utc_dt):
+    local_tz = get_localzone()
+    local_dt = utc_dt.replace(tzinfo=UTC).astimezone(local_tz)
+    return local_tz.normalize(local_dt)
+
+def datetime_to_local_zone_str(utc_str: str):
+    utc_dt = datetime. strptime(utc_str, '%Y-%m-%d %H:%M:%S.%f')
+    return utc_to_local(utc_dt).strftime('%Y-%m-%d %H:%M:%S')
 
 def decode_generalized_time(gtime: bytes) -> datetime:
     '''Decode byte string as generalized time (UTC).'''

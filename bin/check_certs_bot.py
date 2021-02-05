@@ -26,10 +26,11 @@ rejected for him.
 '''
 
 import argparse
-import datetime
+from datetime import datetime
 import logging
 from multiprocessing import Process
 import queue
+import re
 import threading
 from typing import Tuple, NoReturn
 
@@ -38,10 +39,10 @@ from rpyc.utils.server import ThreadedServer
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
+from check_certs_lib.cert_to_text import datetime_to_local_zone_str
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
-from check_certs_lib.db import DBfactory
-import check_certs_lib.db_schemas as db_schemas
+from check_certs_lib.db_model import Servers, Users, Activity, DB, DB_DEFAULT_URL
 
 
 TOKEN_FILE = '/var/spool/check_certs/TOKEN'
@@ -165,46 +166,44 @@ class CheckCertBot:
         # Run job every 10 seconds
         job_queue.run_repeating(check_queue, interval=10, first=10)
 
-        self.db_factory = DBfactory()
-        self.servers_db = self.db_factory.get_db('servers')
-        self.servers_db.create(db_schemas.servers_create_statement)
-        self.users_db = self.db_factory.get_db('users')
-        self.users_db.create(db_schemas.users_create_statement)
-        self.activity_db = self.db_factory.get_db('activity')
-        self.activity_db.create(db_schemas.activity_create_statement)
+        self.db = DB(DB_DEFAULT_URL)
+        self.db.create_db()
 
     def user_access(self, cmd, message) -> bool:
         '''Check user access'''
-        res = self.users_db.select('*', f'id={message.chat_id}')
+        allowed = True
+        session = self.db.get_session()
+        users_res = session.query(Users).filter(Users.id == message.chat_id).one_or_none()
+        activity_res = session.query(Activity).filter(Activity.user_id == message.chat_id).filter(
+                Activity.date.like(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')+'%')).all()
         # A new user
-        if len(res) == 0:
-            self.users_db.insert(
-                    'id, name, full_name, language_code, first_met, last_activity',
-                    f'"{message.chat_id}", "{message.chat.username}", '
-                    f'"{message.chat.first_name} {message.chat.last_name}", '
-                    f'"{message.from_user.language_code}", '
-                    'CURRENT_TIMESTAMP, CURRENT_TIMESTAMP')
+        if users_res is None:
+            user = Users(id=message.chat_id, name=message.chat.username,
+                         full_name=message.chat.first_name+' '+message.chat.last_name,
+                         language_code = message.from_user.language_code,
+                         first_met = datetime.utcnow(),
+                         last_activity = datetime.utcnow())
+            session.add(user)
         else:
-            if res[0]['status'] == 'ban':
+            if users_res.status.lower() == 'ban':
                 logging.warning('banned: %s. %s.', message.chat_id, cmd)
-                return False
+                allowed = False
+            else:
+                # Flood protect
+                if len(activity_res) > 0:
+                    logging.warning('Flood activity: %s - %d times per seconds. Blocked.',
+                                            message.chat_id, len(activity_res))
+                    allowed = False
+            users_res.last_activity = datetime.utcnow()
 
-            # Check for flooding
-            rows = self.activity_db.select('*',
-                    f'user_id={message.chat_id!r} and '
-                    f'date={datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")!r}')
-            # Flood protect
-            if len(rows) > 0:
-                self.activity_db.insert('user_id, cmd, date',
-                        f'{message.chat_id!r}, {"!"+cmd!r}, CURRENT_TIMESTAMP')
-                logging.warning('Flood activity: %s - %d times per seconds. Blocked.',
-                                        message.chat_id, len(rows))
-                return False
-            self.users_db.update('last_activity=CURRENT_TIMESTAMP',
-                                 f'id={message.chat_id!r}')
+        if not allowed:
+            cmd = '!' + cmd
+
         # Write his activity
-        self.activity_db.insert('user_id, cmd, date',
-                f'{message.chat_id!r}, {cmd!r}, CURRENT_TIMESTAMP')
+        activity = Activity(user_id = message.chat_id, cmd = cmd, date = datetime.utcnow())
+        session.add(activity)
+        session.commit()
+        session.close()
         return True
 
     def start(self) -> None:
@@ -244,50 +243,52 @@ class CheckCertBot:
         args = context.args
         if not self.user_access(f'/list {args}', update.message):
             return
-        res = list()
-        short = False
+
+        chat_id = str(update.message.chat_id)
+        # Fields to show. For "full" and "short" list.
+        fields: tuple = ('when_added', 'url', 'warn_before_expired', 'last_checked', 'status')
         if len(args) > 0 and args[0] == 'short':
-            short = True
-        if short:
-            res = self.servers_db.select(
-                    'url, datetime(last_checked, "localtime") as last_checked, status',
-                    f'chat_id="{str(update.message.chat_id)}"')
-        else:
-            res = self.servers_db.select(
-                    'datetime(when_added, "localtime") as when_added, url, '
-                    'warn_before_expired, '
-                    'datetime(last_checked, "localtime") as last_checked, status',
-                    f'chat_id="{str(update.message.chat_id)}"')
+            fields = ('url', 'last_checked', 'status')
 
-        output = list()
-        if len(res) == 0:
-            output = ['Empty']
-        else:
-            line = '|'.join([str(elem) for elem in res[0].keys()])
-            output.append('<b>' + line + '</b>')
+        session = self.db.get_session()
+        query_res = session.query(Servers).filter(Servers.chat_id == chat_id)
 
-        for row in res:
-            line = '|'.join([str(elem) for elem in row.values()])
-            # Strip start/stop tag characters
-            line = line.replace('<', '').replace('>', '')
+        output: list = []
+        line = '|'.join(fields)
+        output.append('<b>' + line + '</b>')
+        dt_re = re.compile(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d')
+        # XXX convert datetime to localzone from UTC
+        for res in query_res:
+            line = ''
+            for field in fields:
+                val = str(getattr(res, field))
+                if dt_re.match(val):
+                    val = datetime_to_local_zone_str(val)
+                line += val + '|'
+            line = line[:-1]
             output.append(line)
+
+        session.close()
+
+        if len(output) == 1:
+            output = ['Empty']
 
         send_long_message(context.bot, update.message.chat_id, '\n'.join(output))
 
     def add_cmd(self, update, context) -> None:
         '''Process /add command'''
         args = context.args
+        chat_id = update.message.chat_id
         if not self.user_access(f'/add {args}', update.message):
             return
         if len(args) < 1:
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                        text='Use /add URL [days]')
+            send_message_to_user(context.bot, chat_id=chat_id,
+                    text='Use /add URL [days]')
             return
         error, url = parse_url(args[0])
         if error != '':
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                        disable_web_page_preview=1,
-                                        text=f'Parsing error: {error}')
+            send_message_to_user(context.bot, chat_id=chat_id,
+                    disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         # Default days to warn
         days = 5
@@ -295,64 +296,78 @@ class CheckCertBot:
             if args[1].isdigit():
                 days = int(args[1])
             else:
-                send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                            text='days must be integer')
+                send_message_to_user(context.bot, chat_id=chat_id,
+                        text='days must be integer')
                 return
+
         # Check for duplicates
-        res = self.servers_db.select('url',
-                f'url="{url}" AND chat_id="{str(update.message.chat_id)}"')
-        if len(res) > 0:
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+        session = self.db.get_session()
+        query_res = session.query(Servers.url).filter(Servers.url == url
+                                         ).filter(Servers.chat_id == chat_id).one_or_none()
+        if query_res is not None:
+            send_message_to_user(context.bot, chat_id=chat_id,
                     disable_web_page_preview=1, text=f'{url} already exists')
+            session.close()
             return
-        # datetime('Never', 'localtime') == NoneType. So I use 0000-01-01 00:00:00 as 'never' value.
-        self.servers_db.insert(
-                'when_added, url, chat_id, warn_before_expired, last_checked, '
-                'last_ok, status, cert_id',
-                f'CURRENT_TIMESTAMP, "{url}", "{str(update.message.chat_id)}", '
-                f'"{days}", "0000-01-01 00:00:00", "0000-01-01 00:00:00", "", "0"')
-        send_message_to_user(context.bot, chat_id=update.message.chat_id,
+        new_server = Servers(url=url, chat_id=chat_id, warn_before_expired=days)
+        session.add(new_server)
+        session.commit()
+        session.close()
+
+        send_message_to_user(context.bot, chat_id=chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Successfully added: {url}')
 
     def hold_cmd(self, update, context) -> None:
         '''Process /hold command'''
         args = context.args
+        chat_id = update.message.chat_id
         if not self.user_access(f'/hold {args}', update.message):
             return
         if len(args) < 1:
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                 text='Use /hold URL')
+            send_message_to_user(context.bot, chat_id=chat_id, text='Use /hold URL')
             return
         error, url = parse_url(args[0])
         if error != '':
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                        disable_web_page_preview=1,
-                                        text=f'Parsing error: {error}')
+            send_message_to_user(context.bot, chat_id=chat_id,
+                    disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
-        self.servers_db.update('status="HOLD"',
-                f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        send_message_to_user(context.bot, chat_id=update.message.chat_id,
+
+        session = self.db.get_session()
+        query = session.query(Servers).filter(Servers.url == url
+                                    ).filter(Servers.chat_id == chat_id)
+        query.update({Servers.status: 'HOLD'})
+        session.commit()
+        session.close()
+
+        send_message_to_user(context.bot, chat_id=chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Hold checking for: {url}')
 
     def unhold_cmd(self, update, context) -> None:
         '''Process /unhold command'''
         args = context.args
+        chat_id = update.message.chat_id
         if not self.user_access(f'/unhold {args}', update.message):
             return
         if len(args) < 1:
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                                         text='Use /unhold URL')
             return
         (error, url) = parse_url(args[0])
         if error != '':
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
-        self.servers_db.update('status="None"',
-                            f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
+
+        session = self.db.get_session()
+        query = session.query(Servers).filter(Servers.url == url
+                                    ).filter(Servers.chat_id == chat_id)
+        query.update({Servers.status: ''})
+        session.commit()
+        session.close()
+
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Unhold checking for: {url}')
@@ -360,30 +375,47 @@ class CheckCertBot:
     def remove_cmd(self, update, context) -> None:
         '''Process /remove command'''
         args = context.args
+        chat_id = update.message.chat_id
+        deleted = False
         if not self.user_access(f'/remove {args}', update.message):
             return
         if len(args) < 1:
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                                         text='Use /remove URL')
             return
         error, url = parse_url(args[0])
         if error != '':
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                                         disable_web_page_preview=1,
                                         text=f'Parsing error: {error}')
             return
-        self.servers_db.delete(
-                f'url="{url}" and chat_id="{str(update.message.chat_id)}"')
-        send_message_to_user(context.bot, chat_id=update.message.chat_id,
+        session = self.db.get_session()
+        delete_obj = session.query(Servers).filter(Servers.url == url).filter(
+                Servers.chat_id == chat_id).one_or_none()
+        if delete_obj is None:
+            send_message_to_user(context.bot, chat_id=id,
+                                        disable_web_page_preview=1,
+                                        text=f'{url} not found')
+        else:
+            session.delete(delete_obj)
+            deleted = True
+        session.commit()
+        session.close()
+        if deleted:
+            send_message_to_user(context.bot, chat_id=chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Successfully removed: {url}')
 
     def reset_cmd(self, update, context) -> None:
         '''Process /reset command'''
+        chat_id = update.message.chat_id
         if not self.user_access('/reset', update.message):
             return
-        self.servers_db.delete(f'chat_id="{str(update.message.chat_id)}"')
-        send_message_to_user(context.bot, chat_id=update.message.chat_id,
+        session = self.db.get_session()
+        delete_obj = session.query(Servers).filter(Servers.chat_id == chat_id).delete()
+        session.commit()
+        session.close()
+        send_message_to_user(context.bot, chat_id=chat_id,
                                     text='Successfully reseted')
 
     def unknown_cmd(self, update, context) -> None:
@@ -395,29 +427,28 @@ class CheckCertBot:
 
     def message(self, update, context) -> None:
         '''Process not command message from the user'''
+        chat_id = update.message.chat_id
         allowed_cmd = ('no-tlsa', 'no-ocsp')
         if not self.user_access(update.message.text, update.message):
             return
         url_text, *args = update.message.text.split(' ')
         error, url = parse_url(url_text)
         if error != '':
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                                         disable_web_page_preview=1, text=error)
             return
         if len(args) > 0 and (len(args) > 2 or len(set(args)-set(allowed_cmd)) > 0):
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                                         text='wrong arguments')
             return
 
         # we need no_tlsa style flags. Convert it from no-tlsa.
         args = [a.replace('-', '_') for a in args]
-        send_message_to_user(context.bot, chat_id=update.message.chat_id,
+        send_message_to_user(context.bot, chat_id=chat_id,
                                     disable_web_page_preview=1,
                                     text=f'Checking certificate for: {url}')
-        proc = Process(target=async_run_func, args=(context.bot,
-                                                     update.message.chat_id,
-                                                     self.servers_db,
-                                                     url,
+        proc = Process(target=async_run_func, args=(context.bot, chat_id,
+                                                     self.db, url,
                                                      *args))
         proc.start()
 
@@ -427,14 +458,18 @@ def async_run_func(bot, chat_id, db, url, *args) -> None:
     error, result = check_cert(url, need_markup=True, **kwargs)
     send_long_message(bot, chat_id, result+error)
     # Write result to DB if we have an entry. Don't use chat_id here, update for all users if have.
-    res = db.select('*', f'url={url!r}')
-    if len(res) > 0:
+    session = db.get_session()
+    query_res = session.query(Servers).filter(Servers.url == url).all()
+    for res in query_res:
         if error:
-            db.update(f'last_checked=CURRENT_TIMESTAMP, status={error!r}',
-                    f'url={url!r} AND chat_id={chat_id!r}')
+            res.last_checked = datetime.utcnow()
+            res.status = error
         else:
-            db.update('last_checked=CURRENT_TIMESTAMP, last_ok=CURRENT_TIMESTAMP, status="OK"',
-                    f'url={url!r} AND chat_id={chat_id!r}')
+            res.last_checked = datetime.utcnow()
+            res.status = 'OK'
+            res.last_ok = datetime.utcnow()
+    session.commit()
+    session.close()
 
 def main() -> NoReturn:
     '''Main function'''
