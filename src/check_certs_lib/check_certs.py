@@ -158,7 +158,7 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
                 else:
                     if error == 'not found':
                         if not quiet:
-                            error_msg += 'TLSA is not found. Ignored\n'
+                            message += 'TLSA is not found. Ignored\n'
                     else:
                         error_msg += f'TLSA is {b(result)}\n'
 
