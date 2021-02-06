@@ -26,11 +26,13 @@ rejected for him.
 '''
 
 import argparse
+import configparser
 from datetime import datetime
 import logging
 from multiprocessing import Process
 import queue
 import re
+import sys
 import threading
 from typing import Tuple, NoReturn
 
@@ -42,7 +44,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from check_certs_lib.cert_to_text import datetime_to_local_zone_str
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
-from check_certs_lib.db_model import Servers, Users, Activity, DB, DB_DEFAULT_URL
+from check_certs_lib.db_model import Servers, Users, Activity, DB
 
 
 TOKEN_FILE = '/var/spool/check_certs/TOKEN'
@@ -129,7 +131,7 @@ def check_queue(context) -> None:
 
 class CheckCertBot:
     '''Main class for the bot'''
-    def __init__(self, bot_token):
+    def __init__(self, bot_token, db_url):
         self.updater = Updater(token=bot_token)
 
         dispatcher = self.updater.dispatcher
@@ -166,7 +168,7 @@ class CheckCertBot:
         # Run job every 10 seconds
         job_queue.run_repeating(check_queue, interval=10, first=10)
 
-        self.db = DB(DB_DEFAULT_URL)
+        self.db = DB(db_url)
         self.db.create_db()
 
     def user_access(self, cmd, message) -> bool:
@@ -412,7 +414,7 @@ class CheckCertBot:
         if not self.user_access('/reset', update.message):
             return
         session = self.db.get_session()
-        delete_obj = session.query(Servers).filter(Servers.chat_id == chat_id).delete()
+        session.query(Servers).filter(Servers.chat_id == chat_id).delete()
         session.commit()
         session.close()
         send_message_to_user(context.bot, chat_id=chat_id,
@@ -474,8 +476,23 @@ def async_run_func(bot, chat_id, db, url, *args) -> None:
 def main() -> NoReturn:
     '''Main function'''
     parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--conf', type=str, required=True)
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
+
+    config = configparser.ConfigParser()
+    try:
+        config.read(args.conf)
+    except Exception as err:
+        logging.error('Config file read error: %s', err)
+        sys.exit(1)
+
+    try:
+        token = config['BOT']['token']
+        db_url = config['DB']['url']
+    except KeyError:
+        logging.error('You must specify both Bot Token and DB URL in config file')
+        sys.exit(1)
 
     if args.debug:
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -491,8 +508,7 @@ def main() -> NoReturn:
     thr.daemon = True
     thr.start()
 
-    token = open(TOKEN_FILE, 'r').read().rstrip('\n')
-    bot = CheckCertBot(token)
+    bot = CheckCertBot(token, db_url)
     bot.start()
 
 if __name__ == '__main__':

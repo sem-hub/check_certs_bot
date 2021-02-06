@@ -8,9 +8,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 
-#DB_DEFAULT_URL = 'sqlite:////var/spool/check_certs/checkcerts.sqlite3'
-DB_DEFAULT_URL = 'sqlite:///checkcerts.sqlite3'
-
 Base = declarative_base()
 
 class Servers(Base):

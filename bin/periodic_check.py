@@ -10,15 +10,17 @@ Use --help to see all options.
 
 import argparse
 from collections import namedtuple
+import configparser
 from datetime import datetime
 import logging
 from multiprocessing import Pool
 import re
+import sys
 
 from sqlalchemy import func
 
 from check_certs_lib.check_certs import check_cert
-from check_certs_lib.db_model import DB, Servers, DB_DEFAULT_URL
+from check_certs_lib.db_model import DB, Servers
 from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
 from check_certs_lib.send_to_chat import send_to_chats
 
@@ -49,7 +51,7 @@ def process_checking(db, dry_run, args: tuple) -> dict:
     res['cert_id'] = col.cert_id
     res['url'] = col.url
     res['count'] = col.count
-    logging.debug('CHECK STARTED')
+    logging.debug('%s CHECK STARTED', col.url)
     res['error'], res['out_text'] = check_cert(
             col.url,
             quiet=True,
@@ -57,7 +59,7 @@ def process_checking(db, dry_run, args: tuple) -> dict:
             warn_before_expired=col.warn_before_expired,
             only_ipv4=True,
             only_one=True)
-    logging.debug('CHECK FINISHED')
+    logging.debug('%s CHECK FINISHED', col.url)
     if not dry_run:
         process_results(db, res)
     return res
@@ -100,7 +102,8 @@ def process_results(db, res: dict) -> None:
                 result = 'Certificate was changed'
                 message = f'{res["url"]} check certificate:\n{result}'
             logging.debug('%s', result)
-            query.update({Servers.last_checked: datetime.utcnow(), Servers.last_ok: datetime.utcnow(), 
+            query.update({Servers.last_checked: datetime.utcnow(),
+                Servers.last_ok: datetime.utcnow(),
                 Servers.status: result, Servers.cert_id: cert_id})
 
     session.commit()
@@ -111,11 +114,25 @@ def process_results(db, res: dict) -> None:
 def main():
     '''Main function'''
     parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--conf', type=str, required=True)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--proc-num', nargs='?', type=int, default=5,
             help='run simultaneous processes')
     args = parser.parse_args()
+
+    config = configparser.ConfigParser()
+    try:
+        config.read(args.conf)
+    except Exception as err:
+        logging.error('Config file read error: %s', err)
+        sys.exit(1)
+
+    try:
+        db_url = config['DB']['url']
+    except KeyError:
+        logging.error('You must specify DB URL in config file')
+        sys.exit(1)
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -124,13 +141,14 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    db = DB(DB_DEFAULT_URL)
+    db = DB(db_url)
     session = db.get_session()
     rows = session.query(func.count(Servers.url), Servers).group_by(Servers.url).all()
-    res = []
-    for r in rows:
-        s = Server(r[0], r[1].url, r[1].cert_id, r[1].warn_before_expired, r[1].status)
-        res.append(s)
+    res_list = []
+    for res in rows:
+        server = Server(res[0], res[1].url, res[1].cert_id,
+                res[1].warn_before_expired, res[1].status)
+        res_list.append(server)
     session.close()
 
     proc_exec = check_process_closure(db, args.dry_run)
