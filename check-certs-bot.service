@@ -2,7 +2,7 @@
 Description = Starting Check Certs Bot
 
 [Service]
-ExecStart = /usr/local/bin/check_certs_bot.py -c /var/spool/check_cers/check-certs.ini
+ExecStart = /usr/local/bin/check_certs_bot.py -c /var/spool/check_certs/check-certs.ini
 Type=simple
 
 [Install]
