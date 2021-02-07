@@ -1,4 +1,5 @@
 '''
+DB model to work with SQL Alchemy
 '''
 
 from datetime import datetime
@@ -11,6 +12,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 Base = declarative_base()
 
 class Servers(Base):
+    '''Save a list of URLs to check and all info about them'''
     __tablename__ = 'servers'
 
     id = Column(Integer, primary_key=True)
@@ -36,6 +38,7 @@ class Servers(Base):
                 f'cert_id={self.cert_id!r})>')
 
 class Users(Base):
+    '''Save users info'''
     __tablename__ = 'users'
 
     id = Column(String, primary_key=True)
@@ -56,6 +59,7 @@ class Users(Base):
                 f'status={self.status!r})>')
 
 class Activity(Base):
+    '''Save user activities'''
     __tablename__ = 'activity'
 
     id = Column(Integer, primary_key=True)
@@ -72,12 +76,15 @@ class Activity(Base):
                 f'date={self.date!r})>')
 
 class DB:
+    '''Simple class to hide SQL Alchemy specifics'''
     def __init__(self, db_url: str):
         self.engine = create_engine(db_url, echo=False)
 
     def create_db(self):
+        '''Cread DB is don't have yet'''
         Base.metadata.create_all(self.engine)
 
     def get_session(self):
+        '''Make a new session and return it'''
         Session = sessionmaker(bind=self.engine)
         return Session()

@@ -10,7 +10,8 @@ import argparse
 import logging
 
 from check_certs_lib.check_certs import check_cert
-from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
+from check_certs_lib.logging_black_white_lists import (
+        Blacklist, add_filter_to_all_handlers)
 
 
 # MAIN ()
@@ -24,7 +25,8 @@ if __name__ == '__main__':
     parser.add_argument('-id', '--print-id', action='store_true',
                         help='Print certificate ID. Useful with --quiet')
     parser.add_argument('-w', '--warn-before-expired', type=int, default=5,
-        help='Make a warning before certificate expired. Default: 5 days. 0 for off.')
+                        help='Make a warning before certificate expired. '
+                                'Default: 5 days. 0 for off.')
     parser.add_argument('-4', '--only-ipv4', action='store_true',
                         help='Use only IPv4 addresses for checks')
     parser.add_argument('-6', '--only-ipv6', action='store_true',

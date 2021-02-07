@@ -76,7 +76,8 @@ def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
             result.append(rdata)
     return result
 
-def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]:
+def get_authority_ns_for(dname: str, quiet: bool = True
+                                                    ) -> Dict[str, List[str]]:
     '''
     Get list of IP addresses for authority DNS server for this domain.
     Need for get_dnssec_request().
@@ -100,14 +101,16 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
         query = dns.message.make_query(sdomain, dns.rdatatype.NS)
         response = None
         try:
-            response = dns.query.udp_with_fallback(query, nameservers[0], timeout=TIMEOUT)
+            response = dns.query.udp_with_fallback(query, nameservers[0],
+                    timeout=TIMEOUT)
         except Exception as err:
             logger.error(str(err))
             break
         i = 1
         while response[0].rcode() != dns.rcode.NOERROR and i < len(nameservers):
             try:
-                response = dns.query.udp_with_fallback(query, nameservers[i], timeout=TIMEOUT)
+                response = dns.query.udp_with_fallback(query, nameservers[i],
+                        timeout=TIMEOUT)
             except Exception as err:
                 logger.error(str(err))
                 break
@@ -115,7 +118,8 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
         # We tried all nameservers and got errors for each
         if response[0].rcode() != dns.rcode.NOERROR:
             if not quiet:
-                logger.debug('All DNS queried and all returned error for %s', dname)
+                logger.debug('All DNS queried and all returned error for %s',
+                        dname)
             return authority
 
         rrset = None
@@ -147,11 +151,13 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     ns_list = get_authority_ns_for(dname, quiet)
     zone = list(ns_list.keys())[0]
     # Get DNSKEY for zone
-    request = dns.message.make_query(zone, dns.rdatatype.DNSKEY, want_dnssec=True)
+    request = dns.message.make_query(zone, dns.rdatatype.DNSKEY,
+            want_dnssec=True)
     nsaddr = ns_list[zone]
     response = None
     try:
-        response = dns.query.udp_with_fallback(request, nsaddr[0], timeout=TIMEOUT)
+        response = dns.query.udp_with_fallback(request, nsaddr[0],
+                timeout=TIMEOUT)
     except Exception as err:
         logger.error(str(err))
         return []
@@ -161,7 +167,8 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
           len(response[0].answer) != 2 and \
           i < len(nsaddr):
         try:
-            response = dns.query.udp_with_fallback(request, nsaddr[i], timeout=TIMEOUT)
+            response = dns.query.udp_with_fallback(request, nsaddr[i],
+                    timeout=TIMEOUT)
         except Exception as err:
             logger.error(str(err))
             break
@@ -189,7 +196,8 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     name = dns.name.from_text(dname)
     request = dns.message.make_query(name, rtype, want_dnssec=True)
     try:
-        response = dns.query.udp_with_fallback(request, nsaddr[0], timeout=TIMEOUT)
+        response = dns.query.udp_with_fallback(request, nsaddr[0],
+                timeout=TIMEOUT)
     except Exception as err:
         logger.debug(str(err))
         return []

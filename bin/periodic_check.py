@@ -21,11 +21,13 @@ from sqlalchemy import func
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.db_model import DB, Servers
-from check_certs_lib.logging_black_white_lists import Blacklist, add_filter_to_all_handlers
+from check_certs_lib.logging_black_white_lists import (
+        Blacklist, add_filter_to_all_handlers)
 from check_certs_lib.send_to_chat import send_to_chats
 
 
-Server = namedtuple('Server', ['count', 'url', 'cert_id', 'warn_before_expired', 'status'])
+Server = namedtuple('Server',
+        ['count', 'url', 'cert_id', 'warn_before_expired', 'status'])
 
 def check_process_closure(db, dry_run: bool):
     '''A closure to hide arguments. Multiprocess function takes only one.'''
@@ -85,15 +87,16 @@ def process_results(db, res: dict) -> None:
     if match is None:
         message = f'{res["url"]} check certificate error:\n{result}'
         logging.debug('Error: |%s|', result)
-        query.update({Servers.last_checked: datetime.utcnow(), Servers.status: result})
+        query.update({Servers.last_checked: datetime.utcnow(),
+            Servers.status: result})
     else:
         cert_id = match.group(1)
         result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
         if result != '':
             message = f'{res["url"]} check certificate error:\n{result}'
             logging.debug('Error*: %s', result)
-            query.update({Servers.last_checked: datetime.utcnow(), Servers.status: result,
-                Servers.cert_id: cert_id})
+            query.update({Servers.last_checked: datetime.utcnow(),
+                Servers.status: result, Servers.cert_id: cert_id})
         else:
             # It's a first check or certificate did not changed
             if res['cert_id'] == '' or cert_id == res['cert_id']:
@@ -143,7 +146,8 @@ def main():
 
     db = DB(db_url)
     session = db.get_session()
-    rows = session.query(func.count(Servers.url), Servers).group_by(Servers.url).all()
+    rows = session.query(func.count(Servers.url), Servers).group_by(Servers.url
+                                                                        ).all()
     res_list = []
     for res in rows:
         server = Server(res[0], res[1].url, res[1].cert_id,
@@ -153,7 +157,7 @@ def main():
 
     proc_exec = check_process_closure(db, args.dry_run)
     with Pool(processes=args.proc_num) as pool:
-        pool.map(proc_exec, enumerate(res))
+        pool.map(proc_exec, enumerate(res_list))
 
 if __name__ == '__main__':
     main()

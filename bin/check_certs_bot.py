@@ -126,7 +126,8 @@ def check_queue(context) -> None:
     '''Check queue with messages for users got from RPYC.'''
     while not remote_messages.empty():
         chat_id, msg = remote_messages.get()
-        send_message_to_user(context.bot, chat_id=chat_id, disable_web_page_preview=1, text=msg)
+        send_message_to_user(context.bot, chat_id=chat_id,
+                disable_web_page_preview=1, text=msg)
         remote_messages.task_done()
 
 class CheckCertBot:
@@ -151,9 +152,11 @@ class CheckCertBot:
         dispatcher.add_handler(add_cmd_handler)
         hold_cmd_handler = CommandHandler('hold', self.hold_cmd, pass_args=True)
         dispatcher.add_handler(hold_cmd_handler)
-        unhold_cmd_handler = CommandHandler('unhold', self.unhold_cmd, pass_args=True)
+        unhold_cmd_handler = CommandHandler('unhold', self.unhold_cmd,
+                pass_args=True)
         dispatcher.add_handler(unhold_cmd_handler)
-        remove_cmd_handler = CommandHandler('remove', self.remove_cmd, pass_args=True)
+        remove_cmd_handler = CommandHandler('remove', self.remove_cmd,
+                pass_args=True)
         dispatcher.add_handler(remove_cmd_handler)
         reset_cmd_handler = CommandHandler('reset', self.reset_cmd)
         dispatcher.add_handler(reset_cmd_handler)
@@ -175,16 +178,19 @@ class CheckCertBot:
         '''Check user access'''
         allowed = True
         session = self.db.get_session()
-        users_res = session.query(Users).filter(Users.id == message.chat_id).one_or_none()
-        activity_res = session.query(Activity).filter(Activity.user_id == message.chat_id).filter(
-                Activity.date.like(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')+'%')).all()
+        users_res = session.query(Users).filter(
+                Users.id == message.chat_id).one_or_none()
+        activity_res = session.query(Activity).filter(
+                Activity.user_id == message.chat_id).filter(
+                Activity.date.like(
+                    datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')+'%')).all()
         # A new user
         if users_res is None:
             user = Users(id=message.chat_id, name=message.chat.username,
-                         full_name=message.chat.first_name+' '+message.chat.last_name,
-                         language_code = message.from_user.language_code,
-                         first_met = datetime.utcnow(),
-                         last_activity = datetime.utcnow())
+                 full_name=message.chat.first_name+' '+message.chat.last_name,
+                 language_code = message.from_user.language_code,
+                 first_met = datetime.utcnow(),
+                 last_activity = datetime.utcnow())
             session.add(user)
         else:
             if users_res.status.lower() == 'ban':
@@ -193,8 +199,8 @@ class CheckCertBot:
             else:
                 # Flood protect
                 if len(activity_res) > 0:
-                    logging.warning('Flood activity: %s - %d times per seconds. Blocked.',
-                                            message.chat_id, len(activity_res))
+                    logging.warning('Flood activity: %s - %d times per '
+                        'seconds. Blocked.', message.chat_id, len(activity_res))
                     allowed = False
             users_res.last_activity = datetime.utcnow()
 
@@ -202,7 +208,8 @@ class CheckCertBot:
             cmd = '!' + cmd
 
         # Write his activity
-        activity = Activity(user_id = message.chat_id, cmd = cmd, date = datetime.utcnow())
+        activity = Activity(user_id = message.chat_id, cmd = cmd,
+                date = datetime.utcnow())
         session.add(activity)
         session.commit()
         session.close()
@@ -236,9 +243,10 @@ class CheckCertBot:
                     text='You are banned')
             return
         text = (f'{update.message.chat_id}: {update.message.chat.username} '
-                f'{update.message.chat.first_name} {update.message.chat.last_name} '
-                f'{update.message.from_user.language_code}')
-        send_message_to_user(context.bot, chat_id=update.message.chat_id, text=text)
+            f'{update.message.chat.first_name} {update.message.chat.last_name} '
+            f'{update.message.from_user.language_code}')
+        send_message_to_user(context.bot, chat_id=update.message.chat_id,
+                text=text)
 
     def list_cmd(self, update, context) -> None:
         '''Process /list command'''
@@ -248,7 +256,9 @@ class CheckCertBot:
 
         chat_id = str(update.message.chat_id)
         # Fields to show. For "full" and "short" list.
-        fields: tuple = ('when_added', 'url', 'warn_before_expired', 'last_checked', 'status')
+        fields: tuple = (
+                'when_added', 'url', 'warn_before_expired',
+                'last_checked', 'status')
         if len(args) > 0 and args[0] == 'short':
             fields = ('url', 'last_checked', 'status')
 
@@ -275,7 +285,8 @@ class CheckCertBot:
         if len(output) == 1:
             output = ['Empty']
 
-        send_long_message(context.bot, update.message.chat_id, '\n'.join(output))
+        send_long_message(context.bot, update.message.chat_id,
+                '\n'.join(output))
 
     def add_cmd(self, update, context) -> None:
         '''Process /add command'''
@@ -305,7 +316,7 @@ class CheckCertBot:
         # Check for duplicates
         session = self.db.get_session()
         query_res = session.query(Servers.url).filter(Servers.url == url
-                                         ).filter(Servers.chat_id == chat_id).one_or_none()
+                             ).filter(Servers.chat_id == chat_id).one_or_none()
         if query_res is not None:
             send_message_to_user(context.bot, chat_id=chat_id,
                     disable_web_page_preview=1, text=f'{url} already exists')
@@ -327,7 +338,8 @@ class CheckCertBot:
         if not self.user_access(f'/hold {args}', update.message):
             return
         if len(args) < 1:
-            send_message_to_user(context.bot, chat_id=chat_id, text='Use /hold URL')
+            send_message_to_user(context.bot, chat_id=chat_id,
+                    text='Use /hold URL')
             return
         error, url = parse_url(args[0])
         if error != '':
@@ -439,7 +451,8 @@ class CheckCertBot:
             send_message_to_user(context.bot, chat_id=chat_id,
                                         disable_web_page_preview=1, text=error)
             return
-        if len(args) > 0 and (len(args) > 2 or len(set(args)-set(allowed_cmd)) > 0):
+        if len(args) > 0 and (len(args) > 2 or
+                len(set(args)-set(allowed_cmd)) > 0):
             send_message_to_user(context.bot, chat_id=chat_id,
                                         text='wrong arguments')
             return
@@ -459,7 +472,8 @@ def async_run_func(bot, chat_id, db, url, *args) -> None:
     kwargs = {v: True for (_, v) in enumerate(args)}
     error, result = check_cert(url, need_markup=True, **kwargs)
     send_long_message(bot, chat_id, result+error)
-    # Write result to DB if we have an entry. Don't use chat_id here, update for all users if have.
+    # Write result to DB if we have an entry.
+    # Don't use chat_id here, update for all users if have.
     session = db.get_session()
     query_res = session.query(Servers).filter(Servers.url == url).all()
     for res in query_res:
@@ -491,14 +505,17 @@ def main() -> NoReturn:
         token = config['BOT']['token']
         db_url = config['DB']['url']
     except KeyError:
-        logging.error('You must specify both Bot Token and DB URL in config file')
+        logging.error('You must specify both Bot Token and DB URL in config '
+                        'file')
         sys.exit(1)
 
     if args.debug:
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        logging.basicConfig(
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 level=logging.DEBUG)
     else:
-        logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        logging.basicConfig(
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 level=logging.WARNING)
 
     rpyc_log = logging.getLogger('RPYC')

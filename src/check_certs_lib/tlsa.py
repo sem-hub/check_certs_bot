@@ -13,7 +13,8 @@ from check_certs_lib.dns_requests import get_tlsa_record
 
 NULL = ''
 
-def generate_tlsa(cert: crypto.X509, usage: int, selector: int, mtype: int) -> bytes:
+def generate_tlsa(cert: crypto.X509, usage: int, selector: int,
+        mtype: int) -> bytes:
     '''
     Construct a TLSA record.
     '''
