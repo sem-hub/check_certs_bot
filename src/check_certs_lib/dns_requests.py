@@ -85,8 +85,6 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
              only one elemeint in the dictionary always
     '''
     logger = logging.getLogger(__name__ + '.get_authority_ns_for')
-    # Turn off debug for this function temporarly
-    logger.setLevel(logging.INFO)
     dlevel = dname.split('.')
     dlevel.reverse()
     default_resolver = dns.resolver.get_default_resolver()
@@ -100,14 +98,16 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
         query = dns.message.make_query(sdomain, dns.rdatatype.NS)
         response = None
         try:
-            response = dns.query.udp_with_fallback(query, nameservers[0], timeout=TIMEOUT)
+            response = dns.query.udp_with_fallback(query, nameservers[0],
+                    timeout=TIMEOUT)
         except Exception as err:
             logger.error(str(err))
             break
         i = 1
         while response[0].rcode() != dns.rcode.NOERROR and i < len(nameservers):
             try:
-                response = dns.query.udp_with_fallback(query, nameservers[i], timeout=TIMEOUT)
+                response = dns.query.udp_with_fallback(query, nameservers[i],
+                        timeout=TIMEOUT)
             except Exception as err:
                 logger.error(str(err))
                 break
@@ -115,7 +115,8 @@ def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]
         # We tried all nameservers and got errors for each
         if response[0].rcode() != dns.rcode.NOERROR:
             if not quiet:
-                logger.debug('All DNS queried and all returned error for %s', dname)
+                logger.debug('All DNS queried and all returned error for %s',
+                        dname)
             return authority
 
         rrset = None
@@ -147,11 +148,13 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     ns_list = get_authority_ns_for(dname, quiet)
     zone = list(ns_list.keys())[0]
     # Get DNSKEY for zone
-    request = dns.message.make_query(zone, dns.rdatatype.DNSKEY, want_dnssec=True)
+    request = dns.message.make_query(zone, dns.rdatatype.DNSKEY,
+            want_dnssec=True)
     nsaddr = ns_list[zone]
     response = None
     try:
-        response = dns.query.udp_with_fallback(request, nsaddr[0], timeout=TIMEOUT)
+        response = dns.query.udp_with_fallback(request, nsaddr[0],
+                timeout=TIMEOUT)
     except Exception as err:
         logger.error(str(err))
         return []
@@ -161,7 +164,8 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
           len(response[0].answer) != 2 and \
           i < len(nsaddr):
         try:
-            response = dns.query.udp_with_fallback(request, nsaddr[i], timeout=TIMEOUT)
+            response = dns.query.udp_with_fallback(request, nsaddr[i],
+                    timeout=TIMEOUT)
         except Exception as err:
             logger.error(str(err))
             break
@@ -181,15 +185,16 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     zname = dns.name.from_text(zone)
     try:
         dns.dnssec.validate(dnskey, answer[1], {zname: dnskey})
-    except dns.dnssec.ValidationFailure:
+    except Exception as err:
         if not quiet:
-            logger.error('zone %s signature error', zone)
+            logger.error('zone %s signature error: %s', zone, err)
         return []
 
     name = dns.name.from_text(dname)
     request = dns.message.make_query(name, rtype, want_dnssec=True)
     try:
-        response = dns.query.udp_with_fallback(request, nsaddr[0], timeout=TIMEOUT)
+        response = dns.query.udp_with_fallback(request, nsaddr[0],
+                timeout=TIMEOUT)
     except Exception as err:
         logger.debug(str(err))
         return []
@@ -211,9 +216,10 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     answer = response[0].answer
     try:
         dns.dnssec.validate(answer[0], answer[1], {zname: dnskey})
-    except dns.dnssec.ValidationFailure:
+    except Exception as err:
         if not quiet:
-            logger.error('"%s" record for %s signature error', rtype, dname)
+            logger.error('"%s" record for %s signature error: err', rtype,
+                    dname, err)
         return []
 
     result: list = []
