@@ -76,7 +76,8 @@ def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
             result.append(rdata)
     return result
 
-def get_authority_ns_for(dname: str, quiet: bool = True) -> Dict[str, List[str]]:
+def get_authority_ns_for(dname: str, quiet: bool = True
+                                                    ) -> Dict[str, List[str]]:
     '''
     Get list of IP addresses for authority DNS server for this domain.
     Need for get_dnssec_request().

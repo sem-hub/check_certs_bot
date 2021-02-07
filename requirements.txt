@@ -5,6 +5,6 @@ ocsp-checker
 pem
 pyOpenSSL
 python-telegram-bot>13.0.0
-pytz
+sqlalchemy
 rpyc
 timeout_decorator       # To fight with unbreakable OpenSSL.do_handshake()

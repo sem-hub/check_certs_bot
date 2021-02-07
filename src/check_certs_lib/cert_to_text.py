@@ -1,10 +1,11 @@
 '''Set of functions for certificat visualisation.'''
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from OpenSSL import crypto
-from pytz import UTC
 
+
+UTC = timezone.utc
 
 # Text markups
 def need_bold(flag: bool):
@@ -40,7 +41,10 @@ def need_code(flag: bool):
     return helper
 
 def need_pre(flag: bool):
-    '''A closure to make a string preformated if we need it. Or just unchange it.'''
+    '''
+    A closure to make a string preformated if we need it.
+    Or just unchange it.
+    '''
     def helper(text: str) -> str:
         if flag:
             return '<pre>' + text + '</pre>'
@@ -53,12 +57,22 @@ def strip_subject(subj) -> str:
     res = res.replace('<', '')
     return res.replace('>', '')
 
+def datetime_to_user_tz_str(utc_str: str, tz: int):
+    '''Encode time string to datetime'''
+    utc_dt = datetime.strptime(utc_str, '%Y-%m-%d %H:%M:%S.%f')
+    utc_dt += timedelta(hours=tz)
+    return utc_dt.strftime('%Y-%m-%d %H:%M:%S')
+
 def decode_generalized_time(gtime: bytes) -> datetime:
     '''Decode byte string as generalized time (UTC).'''
-    return datetime.strptime(gtime.decode('utf8'), '%Y%m%d%H%M%SZ').replace(tzinfo=UTC)
+    return datetime.strptime(gtime.decode('utf8'), '%Y%m%d%H%M%SZ'
+            ).replace(tzinfo=UTC)
 
 def list_of_tuples(indent: str, tuples: tuple) -> str:
-    '''Return tuple as sting. Try to decode well known (RFC2253) x500 attribute codes.'''
+    '''
+    Return tuple as sting.
+    Try to decode well known (RFC2253) x500 attribute codes.
+    '''
     text: list = []
     codes = {'C': 'countryName',
              'O': 'organizationName',
@@ -71,7 +85,8 @@ def list_of_tuples(indent: str, tuples: tuple) -> str:
         if name in codes.keys():
             text.append(indent + codes[name] + ': ' + val.decode('utf8'))
         else:
-            text.append(indent + name.decode('utf8') + ': ' + val.decode('utf8'))
+            text.append(indent + name.decode('utf8') + ': ' + \
+                    val.decode('utf8'))
 
     return '\n'.join(map(str, text))
 

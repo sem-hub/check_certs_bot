@@ -2,22 +2,23 @@
 Set of functions for checking and verifying X509 certificates.
 '''
 
-import datetime
+from datetime import datetime, timezone
 import re
 from typing import List, Set, Union
 
 import certifi
 import pem
-from pytz import UTC
 from OpenSSL import crypto
 
 from check_certs_lib.cert_to_text import decode_generalized_time, strip_subject
 
 
+UTC = timezone.utc
+
 def get_days_before_expired(cert: crypto.X509) -> int:
     '''Calcaulate number of days before a certificate expire.'''
     expired_dt = decode_generalized_time(cert.get_notAfter())
-    now_aware = datetime.datetime.utcnow().replace(tzinfo=UTC)
+    now_aware = datetime.utcnow().replace(tzinfo=UTC)
     return (expired_dt - now_aware).days
 
 def get_domains_from_cert(cert: crypto.X509) -> Set[str]:
@@ -78,7 +79,8 @@ def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
     with open(certifi.where(), 'rb') as ca_f:
         raw_ca = ca_f.read()
     for ca_cert in pem.parse(raw_ca):
-        store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM, str(ca_cert)))
+        store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM,
+                                                str(ca_cert)))
 
 # Need we very strict checking flags?
 #    store.set_flags(crypto.X509StoreFlags.X509_STRICT |

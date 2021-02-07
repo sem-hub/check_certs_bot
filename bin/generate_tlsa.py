@@ -31,14 +31,16 @@ def tlsa(url: str):
         logging.error(err)
         sys.exit(1)
     tlsa_value = generate_tlsa(cert, 3, 1, 1)
-    return f'_{port:d}._tcp.fqdn. IN TLSA 3 1 1 {"".join("{:02x}".format(c) for c in tlsa_value)}'
+    return (f'_{port:d}._tcp.fqdn. IN TLSA 3 1 1 '
+           f'{"".join("{:02x}".format(c) for c in tlsa_value)}')
 
 def main():
     '''Main function'''
     parser = argparse.ArgumentParser()
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('source', nargs='?',
-            help='URL or file with URLs list. If not specified, read list from stdin.')
+                        help='URL or file with URLs list. If not specified, '
+                                'read list from stdin.')
     args = parser.parse_args()
 
     if args.debug:
