@@ -43,7 +43,7 @@ Adding domains into DB with the bot mentioned above.
 Use it with cron(8).
 crontab -e example:
 ```
-3 5 * * * /usr/local/bin/periodic_check.py -c config.ini
+3 5 * * * /usr/local/bin/periodic_check.py -c check-certs.ini
 ```
 
 generate_tlsa.py - Generate TLSA records for DNS server (bind format).

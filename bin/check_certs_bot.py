@@ -550,10 +550,8 @@ def main() -> NoReturn:
     args = parser.parse_args()
 
     config = configparser.ConfigParser()
-    try:
-        config.read(args.conf)
-    except Exception as err:
-        logging.error('Config file read error: %s', err)
+    if config.read(args.conf) == []:
+        logging.error('Can\'t read config file: %s', args.conf)
         sys.exit(1)
 
     try:
