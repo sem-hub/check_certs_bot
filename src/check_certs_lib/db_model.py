@@ -45,6 +45,7 @@ class Users(Base):
     name = Column(String)
     full_name = Column(String)
     language_code = Column(String)
+    timezone = Column(Integer, default=0)
     first_met = Column(String, default=datetime.utcnow)
     last_activity = Column(String, default='')
     status = Column(String, default='')

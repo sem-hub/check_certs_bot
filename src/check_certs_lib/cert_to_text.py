@@ -1,11 +1,11 @@
 '''Set of functions for certificat visualisation.'''
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from OpenSSL import crypto
-from pytz import UTC
-from tzlocal import get_localzone
 
+
+UTC = timezone.utc
 
 # Text markups
 def need_bold(flag: bool):
@@ -57,16 +57,11 @@ def strip_subject(subj) -> str:
     res = res.replace('<', '')
     return res.replace('>', '')
 
-def utc_to_local(utc_dt):
-    '''Convert UTC datetime to local TZ'''
-    local_tz = get_localzone()
-    local_dt = utc_dt.replace(tzinfo=UTC).astimezone(local_tz)
-    return local_tz.normalize(local_dt)
-
-def datetime_to_local_zone_str(utc_str: str):
+def datetime_to_user_tz_str(utc_str: str, tz: int):
     '''Encode time string to datetime'''
-    utc_dt = datetime. strptime(utc_str, '%Y-%m-%d %H:%M:%S.%f')
-    return utc_to_local(utc_dt).strftime('%Y-%m-%d %H:%M:%S')
+    utc_dt = datetime.strptime(utc_str, '%Y-%m-%d %H:%M:%S.%f')
+    utc_dt += timedelta(hours=tz)
+    return utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
 def decode_generalized_time(gtime: bytes) -> datetime:
     '''Decode byte string as generalized time (UTC).'''

@@ -17,6 +17,7 @@ The bot supports this commands:
     /list - get list all records for this user.
     /reset - to remove all records for this user.
     /hold, /unhold - stop/restore checks for this URL.
+    /timezone - set users' timezone.
     /id - show user's ID.
 
 An user can see only URLs he added.
@@ -41,7 +42,7 @@ from rpyc.utils.server import ThreadedServer
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-from check_certs_lib.cert_to_text import datetime_to_local_zone_str
+from check_certs_lib.cert_to_text import datetime_to_user_tz_str
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.db_model import Servers, Users, Activity, DB
@@ -72,6 +73,7 @@ or a command:
 /unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry.
 /remove \\[_protocol_://]hostname\\[:_port_] - remove a server from periodical checking list.
 /reset  - reset all periodical checking list.
+/timezone [+-N] - set timezone correction from UTC. In hours.
 
 Allowed protocols: all from /etc/services.
 For mail protocols you can specify domain name not FQDN. It will be checked for MX DNS records first.
@@ -160,6 +162,9 @@ class CheckCertBot:
         dispatcher.add_handler(remove_cmd_handler)
         reset_cmd_handler = CommandHandler('reset', self.reset_cmd)
         dispatcher.add_handler(reset_cmd_handler)
+        timezone_cmd_handler = CommandHandler('timezone', self.timezone_cmd,
+                pass_args=True)
+        dispatcher.add_handler(timezone_cmd_handler)
 
         unknown_cmd_handler = MessageHandler(Filters.command, self.unknown_cmd)
         dispatcher.add_handler(unknown_cmd_handler)
@@ -238,15 +243,23 @@ class CheckCertBot:
 
     def id_cmd(self, update, context) -> None:
         '''Process /id command'''
+        chat_id = str(update.message.chat_id)
         if not self.user_access('/id', update.message):
-            send_message_to_user(context.bot, chat_id=update.message.chat_id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                     text='You are banned')
             return
+        session = self.db.get_session()
+        user = session.query(Users).filter(Users.id == chat_id).one_or_none()
+        tz = user.timezone
+        status = user.status
+        session.close()
+        if status == '':
+            status = 'normal user'
         text = (f'{update.message.chat_id}: {update.message.chat.username} '
             f'{update.message.chat.first_name} {update.message.chat.last_name} '
-            f'{update.message.from_user.language_code}')
-        send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                text=text)
+            f'{update.message.from_user.language_code}'
+            f' timezone=UTC{tz:+d} status={status}')
+        send_message_to_user(context.bot, chat_id=chat_id, text=text)
 
     def list_cmd(self, update, context) -> None:
         '''Process /list command'''
@@ -255,6 +268,10 @@ class CheckCertBot:
             return
 
         chat_id = str(update.message.chat_id)
+        session = self.db.get_session()
+        user = session.query(Users).filter(Users.id == chat_id).one()
+        tz = user.timezone
+        session.close()
         # Fields to show. For "full" and "short" list.
         fields: tuple = (
                 'when_added', 'url', 'warn_before_expired',
@@ -275,7 +292,7 @@ class CheckCertBot:
             for field in fields:
                 val = str(getattr(res, field))
                 if dt_re.match(val):
-                    val = datetime_to_local_zone_str(val)
+                    val = datetime_to_user_tz_str(val, tz)
                 line += val + '|'
             line = line[:-1]
             output.append(line)
@@ -431,6 +448,44 @@ class CheckCertBot:
         session.close()
         send_message_to_user(context.bot, chat_id=chat_id,
                                     text='Successfully reseted')
+
+    def timezone_cmd(self, update, context) -> None:
+        '''Process /timezone command'''
+        args = context.args
+        if not self.user_access(f'/timezone {args}', update.message):
+            return
+
+        chat_id = str(update.message.chat_id)
+        if len(args) != 1:
+            send_message_to_user(context.bot, chat_id=chat_id,
+                    text='Only one argument allowed and mandatory: +-N')
+            return
+
+        failure = False
+        if not (args[0][0] in '+-' or args[0][0].isdigit()):
+            failure = True
+        tz = 0
+        try:
+            tz = int(args[0])
+        except ValueError:
+            failure = True
+
+        if abs(tz) > 12:
+            failure = True
+
+        if failure:
+            send_message_to_user(context.bot, chat_id=chat_id,
+                    text='An argument must be: [+-]N. Where N is an integer '
+                            'from 0 to 12.')
+            return
+
+        session = self.db.get_session()
+        user = session.query(Users).filter(Users.id == chat_id).one()
+        user.timezone = tz
+        session.commit()
+        session.close()
+        send_message_to_user(context.bot, chat_id=chat_id,
+                text=f'Timezone set as UTC{tz:+d}')
 
     def unknown_cmd(self, update, context) -> None:
         '''Process user errors in command'''
