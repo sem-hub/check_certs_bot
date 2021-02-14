@@ -32,23 +32,21 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int,
     sha.update(dump)
     return sha.digest()
 
-def check_tlsa(fqdn: str, port: int, cert: crypto.X509, quiet: bool = True
-        ) -> Tuple[str, str]:
+def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> Tuple[str, str]:
     '''
     Construct TLSA, request DNS TLSA record, compare them.
 
     Return: tuple(error, result)
     '''
     logger = logging.getLogger(__name__)
-    answers = get_tlsa_record(fqdn, port, quiet=True)
+    answers = get_tlsa_record(fqdn, port)
 
     if len(answers) == 0:
         return ('not found', NULL)
     result = False
     for answ in answers:
         if answ.usage not in (1, 3):
-            if not quiet:
-                logger.error('Only usage type 1 or 3 are supported')
+            logger.warning('Only usage type 1 or 3 are supported')
             continue
 
         tlsa = generate_tlsa(cert, answ.usage, answ.selector, answ.mtype)

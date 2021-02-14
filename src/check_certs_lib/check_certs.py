@@ -28,7 +28,6 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
             certificate will expire.
 
     Supported flags:
-        quiet - don't output anything except errors.
         need_markup - markup output with some HTML tags for telegram Bot.
         only_ipv4 - use only IPv4 addresses for checking.
         only_ipv6 - use only IPv6 addresses for checking.
@@ -47,7 +46,6 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
     '''
     logger = logging.getLogger(__name__)
     # For fast using
-    quiet = flags.get('quiet', False)
     need_markup = flags.get('need_markup', False)
     only_ipv4 = flags.get('only_ipv4', False)
     only_ipv6 = flags.get('only_ipv6', False)
@@ -68,12 +66,10 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
     message: str = ''
 
     if proto in MAIL_PROTO:
-        if not quiet:
-            message += f'MX records for {fqdn}:\n'
-        for rdata in get_dns_request(fqdn, 'MX', quiet):
+        message += f'MX records for {fqdn}:\n'
+        for rdata in get_dns_request(fqdn, 'MX'):
             mx_host = rdata.exchange.to_text()[:-1]
-            if not quiet:
-                message += f'  {mx_host}\n'
+            message += f'  {mx_host}\n'
             for addr in get_all_dns(rdata.exchange, only_ipv4,
                                     only_ipv6, only_one):
                 addresses.append((mx_host, addr))
@@ -86,19 +82,16 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
     if len(addresses) == 0:
         error_msg += f'No address records found for {fqdn}\n'
         return (error_msg, NULL)
-    if not quiet:
-        message += f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
+    message += f'{len(addresses)} DNS address[es] found for {fqdn}:\n'
 
     cert0_id = 0
     for addr in addresses:
-        if not quiet:
-            message += f'{addr[0]}: {addr[1]}\n'
+        message += f'{addr[0]}: {addr[1]}\n'
         error, chain = get_chain_from_server(addr[0], addr[1], port, proto)
         if error:
             error_msg += f'Error: {error}\n'
             continue
-        if not quiet:
-            message += f'Got {len(chain)} certificates in chain\n'
+        message += f'Got {len(chain)} certificates in chain\n'
         cert = chain[0]
         is_new_cert = not cert0_id
         if is_new_cert:
@@ -106,8 +99,7 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
 
         # Do not check the same certificate again
         if not is_new_cert and cert.get_serial_number() == cert0_id:
-            if not quiet:
-                message += 'Certificate is the same\n'
+            message += 'Certificate is the same\n'
         else:
             if cert.get_serial_number() != cert0_id:
                 error_msg += 'Certificates are differ\n'
@@ -116,8 +108,8 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
 
             if flags.get('print_id'):
                 message += 'ID: {:X}\n'.format(cert.get_serial_number())
-            if not quiet:
-                message += cert_to_text(cert, need_markup) + '\n'
+
+            message += cert_to_text(cert, need_markup) + '\n'
 
             # If we have bad certificate here, don't check it for matching
             if error:
@@ -143,22 +135,18 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
                     if result != 'GOOD':
                         error += f'OCSP error: {b(result)}\n'
                         continue
-                    if not quiet:
-                        message += f'OCSP check result: {b(result)}\n'
-                if not quiet:
-                    message += 'Certificate is good\n'
+                    message += f'OCSP check result: {b(result)}\n'
+                message += 'Certificate is good\n'
             # only good certificate here
             # Run TLSA check if we have TLSA record
             if not flags.get('no_tlsa'):
                 logger.debug('check TLSA')
-                error, result = check_tlsa(fqdn, port, chain[0], quiet)
+                error, result = check_tlsa(fqdn, port, chain[0])
                 if not error:
-                    if not quiet:
-                        message += f'TLSA is {b("OK")}\n'
+                    message += f'TLSA is {b("OK")}\n'
                 else:
                     if error == 'not found':
-                        if not quiet:
-                            message += 'TLSA is not found. Ignored\n'
+                        message += 'TLSA is not found. Ignored\n'
                     else:
                         error_msg += f'TLSA is {b(result)}\n'
 

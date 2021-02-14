@@ -8,6 +8,7 @@ Use --help for allowed arguments.
 
 import argparse
 import logging
+import sys
 
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.logging_black_white_lists import (
@@ -43,7 +44,6 @@ if __name__ == '__main__':
     url = args.url[0]
 
     flags = dict()
-    flags['quiet'] = args.quiet
     flags['print_id'] = args.print_id
     flags['warn_before_expired'] = args.warn_before_expired
     flags['only_ipv4'] = args.only_ipv4
@@ -65,5 +65,10 @@ if __name__ == '__main__':
     logging.debug('url=%s', url)
 
     error, result = check_cert(url, **flags)
-    print(result, end='')
-    print(error, end='')
+    if not error:
+        if not args.quiet:
+            print(result, end='')
+        sys.exit(0)
+    else:
+        print(error, end='')
+        sys.exit(1)

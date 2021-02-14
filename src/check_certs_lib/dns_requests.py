@@ -50,13 +50,12 @@ def get_all_dns(fqdn: str, only_ipv4: bool = False, only_ipv6: bool = False,
             break
     return res
 
-def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
+def get_dns_request(dname: str, rtype: str) -> list:
     '''
     Make arbitrary DNS request.
     Get arguments:
     dname - FQDN.
     rtype - request type (A, AAAA, MX etc.).
-    quiet - Don't pollute output with anything.
 
     Return: list of RR records (addresses or FQDNs for MX request etc.).
     '''
@@ -66,8 +65,7 @@ def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
-        if not quiet:
-            logger.warning('No DNS record %s found for %s', rtype, dname)
+        logger.warning('No DNS record %s found for %s', rtype, dname)
         return []
     except dns.resolver.NoAnswer:
         pass
@@ -76,8 +74,7 @@ def get_dns_request(dname: str, rtype: str, quiet: bool = True) -> list:
             result.append(rdata)
     return result
 
-def get_authority_ns_for(dname: str, quiet: bool = True
-                                                    ) -> Dict[str, List[str]]:
+def get_authority_ns_for(dname: str) -> Dict[str, List[str]]:
     '''
     Get list of IP addresses for authority DNS server for this domain.
     Need for get_dnssec_request().
@@ -115,9 +112,8 @@ def get_authority_ns_for(dname: str, quiet: bool = True
             i += 1
         # We tried all nameservers and got errors for each
         if response[0].rcode() != dns.rcode.NOERROR:
-            if not quiet:
-                logger.debug('All DNS queried and all returned error for %s',
-                        dname)
+            logger.debug('All DNS queried and all returned error for %s',
+                    dname)
             return authority
 
         rrset = None
@@ -140,13 +136,13 @@ def get_authority_ns_for(dname: str, quiet: bool = True
         # end for
     return authority
 
-def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
+def get_dnssec_request(dname: str, rtype: str) -> list:
     '''
     Get any DNS request with DNSSEC checking.
     See get_dns_request for arguments and return value.
     '''
     logger = logging.getLogger(__name__ + '.get_dnssec_request')
-    ns_list = get_authority_ns_for(dname, quiet)
+    ns_list = get_authority_ns_for(dname)
     zone = list(ns_list.keys())[0]
     # Get DNSKEY for zone
     request = dns.message.make_query(zone, dns.rdatatype.DNSKEY,
@@ -172,12 +168,10 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
             break
         i += 1
     if response[0].rcode() != dns.rcode.NOERROR:
-        if not quiet:
-            logger.error('zone %s resolve error', zone)
+        logger.error('zone %s resolve error', zone)
         return []
     if len(response[0].answer) != 2:
-        if not quiet:
-            logger.error('zone %s is not signed', zone)
+        logger.error('zone %s is not signed', zone)
         return []
     answer = response[0].answer
     dnskey = answer[0]
@@ -187,8 +181,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
     try:
         dns.dnssec.validate(dnskey, answer[1], {zname: dnskey})
     except Exception as err:
-        if not quiet:
-            logger.error('zone %s signature error: %s', zone, err)
+        logger.error('zone %s signature error: %s', zone, err)
         return []
 
     name = dns.name.from_text(dname)
@@ -207,20 +200,17 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
         response = dns.query.udp_with_fallback(request, nsaddr[i])
         i += 1
     if response[0].rcode() != dns.rcode.NOERROR:
-        if not quiet:
-            logger.error('%s resolve error', dname)
+        logger.error('%s resolve error', dname)
         return []
     if len(response[0].answer) < 2:
-        if not quiet:
-            logger.error('%s is not signed', dname)
+        logger.error('%s is not signed', dname)
         return []
     answer = response[0].answer
     try:
         dns.dnssec.validate(answer[0], answer[1], {zname: dnskey})
     except Exception as err:
-        if not quiet:
-            logger.error('"%s" record for %s signature error: err', rtype,
-                    dname, err)
+        logger.error('"%s" record for %s signature error: err', rtype,
+                dname, err)
         return []
 
     result: list = []
@@ -229,7 +219,7 @@ def get_dnssec_request(dname: str, rtype: str, quiet: bool = True) -> list:
             result.append(rr.to_rdataset()[0])
     return result
 
-def get_tlsa_record(fqdn: str, port: int, quiet: bool = True) -> list:
+def get_tlsa_record(fqdn: str, port: int) -> list:
     '''
     Construct and make DNS request for a TLSA record.
     Return: list of TLSA records or an empty list.
@@ -237,4 +227,4 @@ def get_tlsa_record(fqdn: str, port: int, quiet: bool = True) -> list:
     rr_str = '_' + str(port) + '._tcp.' + fqdn
 
     # Ask for TLSA only with DNSSEC request
-    return get_dnssec_request(rr_str, 'TLSA', quiet)
+    return get_dnssec_request(rr_str, 'TLSA')

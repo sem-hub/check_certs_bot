@@ -56,7 +56,6 @@ def process_checking(db, dry_run, args: tuple) -> dict:
     logging.debug('%s CHECK STARTED', col.url)
     res['error'], res['out_text'] = check_cert(
             col.url,
-            quiet=True,
             print_id=True,
             warn_before_expired=col.warn_before_expired,
             only_ipv4=True,
@@ -76,25 +75,22 @@ def process_results(db, res: dict) -> None:
     session = db.get_session()
     query = session.query(Servers).filter(Servers.url==res['url'])
     users = [v.chat_id for v in query.all()]
-    if res['error']:
-        result = res['out_text']+res['error']
-    else:
-        result = res['out_text']
-    if isinstance(result, bytes):
-        result = result.decode('utf-8')
-    result = result.strip('\n')
+    result = res['out_text'].strip('\n')
     match = re.search('ID: ([0-9A-Z]+)\n?', result)
+    # We did not get certificat ID. It means we don't have certificate
+    # and have an error on communication process.
     if match is None:
-        message = f'{res["url"]} check certificate error:\n{result}'
-        logging.debug('Error: |%s|', result)
+        message = f'{res["url"]} check certificate error:\n{res["error"]}'
+        logging.debug('Error: |%s|', res['error'])
         query.update({Servers.last_checked: datetime.utcnow(),
             Servers.status: result})
     else:
         cert_id = match.group(1)
         result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
-        if result != '':
-            message = f'{res["url"]} check certificate error:\n{result}'
-            logging.debug('Error*: %s', result)
+        # We have an error in certificate
+        if res['error'] != '':
+            message = f'{res["url"]} check certificate error:\n{res["error"]}'
+            logging.debug('Error*: %s', res['error'])
             query.update({Servers.last_checked: datetime.utcnow(),
                 Servers.status: result, Servers.cert_id: cert_id})
         else:
