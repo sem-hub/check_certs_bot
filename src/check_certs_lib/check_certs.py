@@ -7,6 +7,7 @@ from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.get_cert_from_server import get_chain_from_server
 from check_certs_lib.verify_cert import verify_cert, match_domain, get_days_before_expired
 from check_certs_lib.cert_to_text import cert_to_text, need_bold
+from check_certs_lib.check_ipv6 import check_ipv6_work
 from check_certs_lib.dns_requests import get_dns_request, check_fqdn, get_all_dns
 from check_certs_lib.tlsa import check_tlsa
 from check_certs_lib.ocsp import check_ocsp
@@ -74,9 +75,15 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
                                     only_ipv6, only_one):
                 addresses.append((mx_host, addr))
 
+    # Check if IPv6 stack configured and work
+    ipv6_work = check_ipv6_work()
+
     # if we don't have addresses from MX records
     if len(addresses) == 0:
         for addr in get_all_dns(fqdn, only_ipv4, only_ipv6, only_one):
+            # Ignore IPv6 addresses if stack does not work
+            if ':' in str(addr) and not ipv6_work:
+                continue
             addresses.append((fqdn, addr))
 
     if len(addresses) == 0:

@@ -10,6 +10,7 @@ from check_certs_lib.cert_to_text import (
         datetime_to_user_tz_str
         )
 from check_certs_lib.check_certs import check_cert
+from check_certs_lib.check_ipv6 import check_ipv6_work
 from check_certs_lib.check_validity import (
         is_valid_fqdn,
         parse_and_check_url
