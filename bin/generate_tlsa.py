@@ -23,7 +23,7 @@ def tlsa(url: str):
         return f'Host name is invalid: {fqdn}\n'
     logging.debug('%s %s %s', proto, fqdn, port)
 
-    addr = get_dns_request(fqdn, 'A', False)
+    addr = get_dns_request(fqdn, 'A')
     if len(addr) == 0:
         sys.exit(1)
     err, cert = get_cert_from_server(fqdn, addr[0].to_text(), port, proto)
@@ -31,7 +31,7 @@ def tlsa(url: str):
         logging.error(err)
         sys.exit(1)
     tlsa_value = generate_tlsa(cert, 3, 1, 1)
-    return (f'_{port:d}._tcp.fqdn. IN TLSA 3 1 1 '
+    return (f'_{port:d}._tcp.{fqdn}. IN TLSA 3 1 1 '
            f'{"".join("{:02x}".format(c) for c in tlsa_value)}')
 
 def main():
