@@ -83,7 +83,7 @@ def process_results(db, res: dict) -> None:
         message = f'{res["url"]} check certificate error:\n{res["error"]}'
         logging.debug('Error: |%s|', res['error'])
         query.update({Servers.last_checked: datetime.utcnow(),
-            Servers.status: result})
+            Servers.status: res['error']})
     else:
         cert_id = match.group(1)
         result = re.sub('ID: ([0-9A-Z]+)\n?', '', result)
@@ -92,7 +92,7 @@ def process_results(db, res: dict) -> None:
             message = f'{res["url"]} check certificate error:\n{res["error"]}'
             logging.debug('Error*: %s', res['error'])
             query.update({Servers.last_checked: datetime.utcnow(),
-                Servers.status: result, Servers.cert_id: cert_id})
+                Servers.status: res['error'], Servers.cert_id: cert_id})
         else:
             # It's a first check or certificate did not changed
             if res['cert_id'] == '' or cert_id == res['cert_id']:
