@@ -1,1 +1,1 @@
-include py.typed
+include src/check_certs_lib/py.typed
