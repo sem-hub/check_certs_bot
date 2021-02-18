@@ -65,7 +65,7 @@ def get_dns_request(dname: str, rtype: str) -> list:
     try:
         answers = dns.resolver.resolve(dname, rtype)
     except dns.resolver.NXDOMAIN:
-        logger.warning('No DNS record %s found for %s', rtype, dname)
+        logger.debug('No DNS record %s found for %s', rtype, dname)
         return []
     except dns.resolver.NoAnswer:
         pass
@@ -99,7 +99,7 @@ def get_authority_ns_for(dname: str) -> Dict[str, List[str]]:
             response = dns.query.udp_with_fallback(query, nameservers[0],
                     timeout=TIMEOUT)
         except Exception as err:
-            logger.error(str(err))
+            logger.debug(str(err))
             break
         i = 1
         while response[0].rcode() != dns.rcode.NOERROR and i < len(nameservers):
@@ -107,7 +107,7 @@ def get_authority_ns_for(dname: str) -> Dict[str, List[str]]:
                 response = dns.query.udp_with_fallback(query, nameservers[i],
                         timeout=TIMEOUT)
             except Exception as err:
-                logger.error(str(err))
+                logger.debug(str(err))
                 break
             i += 1
         # We tried all nameservers and got errors for each
@@ -153,7 +153,7 @@ def get_dnssec_request(dname: str, rtype: str) -> list:
         response = dns.query.udp_with_fallback(request, nsaddr[0],
                 timeout=TIMEOUT)
     except Exception as err:
-        logger.error(str(err))
+        logger.debug(str(err))
         return []
     i = 1
     # Try all servers if any error occured
@@ -164,14 +164,14 @@ def get_dnssec_request(dname: str, rtype: str) -> list:
             response = dns.query.udp_with_fallback(request, nsaddr[i],
                     timeout=TIMEOUT)
         except Exception as err:
-            logger.error(str(err))
+            logger.debug(str(err))
             break
         i += 1
     if response[0].rcode() != dns.rcode.NOERROR:
-        logger.error('zone %s resolve error', zone)
+        logger.debug('zone %s resolve error', zone)
         return []
     if len(response[0].answer) != 2:
-        logger.error('zone %s is not signed', zone)
+        logger.debug('zone %s is not signed', zone)
         return []
     answer = response[0].answer
     dnskey = answer[0]
@@ -181,7 +181,7 @@ def get_dnssec_request(dname: str, rtype: str) -> list:
     try:
         dns.dnssec.validate(dnskey, answer[1], {zname: dnskey})
     except Exception as err:
-        logger.error('zone %s signature error: %s', zone, err)
+        logger.debug('zone %s signature error: %s', zone, err)
         return []
 
     name = dns.name.from_text(dname)
@@ -200,16 +200,16 @@ def get_dnssec_request(dname: str, rtype: str) -> list:
         response = dns.query.udp_with_fallback(request, nsaddr[i])
         i += 1
     if response[0].rcode() != dns.rcode.NOERROR:
-        logger.error('%s resolve error', dname)
+        logger.debug('%s resolve error', dname)
         return []
     if len(response[0].answer) < 2:
-        logger.error('%s is not signed', dname)
+        logger.debug('%s is not signed', dname)
         return []
     answer = response[0].answer
     try:
         dns.dnssec.validate(answer[0], answer[1], {zname: dnskey})
     except Exception as err:
-        logger.error('"%s" record for %s signature error: err', rtype,
+        logger.debug('"%s" record for %s signature error: err', rtype,
                 dname, err)
         return []
 
