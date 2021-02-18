@@ -113,23 +113,31 @@ def process_results(db, res: dict) -> None:
 def main():
     '''Main function'''
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--conf', type=str, required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-c', '--conf', type=str,
+            help='Config file from check_cert_bot.py for taking DB URL')
+    group.add_argument('-d', '--db', type=str,
+            help='URL for DB location')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--proc-num', nargs='?', type=int, default=5,
             help='run simultaneous processes')
     args = parser.parse_args()
 
-    config = configparser.ConfigParser()
-    if config.read(args.conf) == []:
-        logging.error('Can\'t read config file: %s', args.conf)
-        sys.exit(1)
+    db_url = ''
+    if args.db is None:
+        config = configparser.ConfigParser()
+        if config.read(args.conf) == []:
+            logging.error('Can\'t read config file: %s', args.conf)
+            sys.exit(1)
 
-    try:
-        db_url = config['DB']['url']
-    except KeyError:
-        logging.error('You must specify DB URL in config file')
-        sys.exit(1)
+        try:
+            db_url = config['DB']['url']
+        except KeyError:
+            logging.error('You must specify DB URL in config file')
+            sys.exit(1)
+    else:
+        db_url = args.db
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
