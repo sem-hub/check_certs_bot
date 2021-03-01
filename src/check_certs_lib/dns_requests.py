@@ -67,7 +67,7 @@ def get_dns_request(dname: str, rtype: str) -> list:
     except dns.resolver.NXDOMAIN:
         logger.debug('No DNS record %s found for %s', rtype, dname)
         return []
-    except dns.resolver.NoAnswer:
+    except (dns.resolver.NoAnswer, dns.exception.Timeout):
         pass
     else:
         for rdata in answers:
