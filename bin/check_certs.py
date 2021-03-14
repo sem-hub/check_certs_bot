@@ -65,9 +65,9 @@ if __name__ == '__main__':
     logging.debug('url=%s', url)
 
     error, result = check_cert(url, **flags)
+    if not args.quiet:
+        print(result, end='')
     if not error:
-        if not args.quiet:
-            print(result, end='')
         sys.exit(0)
     else:
         print(error, end='')

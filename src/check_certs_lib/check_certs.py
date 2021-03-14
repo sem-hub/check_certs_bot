@@ -157,4 +157,4 @@ def check_cert(url_str: str, **flags) -> Tuple[str, str]:
                     else:
                         error_msg += f'TLSA is {b(error)}\n'
 
-    return (error_msg.strip(), message.strip())
+    return (error_msg, message)

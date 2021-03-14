@@ -75,7 +75,7 @@ def process_results(db, res: dict) -> None:
     session = db.get_session()
     query = session.query(Servers).filter(Servers.url==res['url'])
     users = [v.chat_id for v in query.all()]
-    result = res['out_text'].strip('\n')
+    result = res['out_text'].strip()
     match = re.search('ID: ([0-9A-Z]+)\n?', result)
     # We did not get certificat ID. It means we don't have certificate
     # and have an error on communication process.
@@ -92,7 +92,7 @@ def process_results(db, res: dict) -> None:
             message = f'{res["url"]} check certificate error:\n{res["error"]}'
             logging.debug('Error*: %s', res['error'])
             query.update({Servers.last_checked: datetime.utcnow(),
-                Servers.status: res['error'], Servers.cert_id: cert_id})
+                Servers.status: res['error'].strip(), Servers.cert_id: cert_id})
         else:
             # It's a first check or certificate did not changed
             if res['cert_id'] == '' or cert_id == res['cert_id']:

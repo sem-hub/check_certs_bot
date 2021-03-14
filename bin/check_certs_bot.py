@@ -534,7 +534,7 @@ def async_run_func(bot, chat_id, db, url, *args) -> None:
     for res in query_res:
         if error:
             res.last_checked = datetime.utcnow()
-            res.status = error
+            res.status = error.strip()
         else:
             res.last_checked = datetime.utcnow()
             res.status = 'OK'
