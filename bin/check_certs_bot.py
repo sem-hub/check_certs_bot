@@ -57,7 +57,7 @@ A bot for checking SSL/TLS servers certificates.
 
 Enter:
     \\[_protocol_://]_hostname_\\[:_port_] \\[no-tlsa] \\[no-ocsp]
-Default protocol and port is https(443)
+Default protocol and port are https(443)
 
 no-tlsa, no-ocsp flags dissallow TLSA, OCSP checks correspondly.
 
@@ -68,16 +68,18 @@ or a command:
 /help   - show this help message.
 /list \\[short]  - list server names for periodic checking.
 /add \\[_protocol_://]_hostname_\\[:_port_] \\[_days_]   - add a server to periodical checking.
-    _days_ - warn if days till certificate expire will happen.
-/hold \\[_protocol_://]_hostname_\\[_:port_]  - temporary stop checking this entry.
+    _days_ - warn if the certificate expires before this days number.
+/hold \\[_protocol_://]_hostname_\\[_:port_]  - stop checking this entry but don't remove it.
 /unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry.
-/remove \\[_protocol_://]hostname\\[:_port_] - remove a server from periodical checking list.
-/reset  - reset all periodical checking list.
+/remove \\[_protocol_://]hostname\\[:_port_] - remove an entry from periodical checking list.
+/reset  - reset all periodical checking list (WARNINNG! No confirm will be provided).
 /timezone [+-N] - set timezone correction from UTC. In hours.
 
-Allowed protocols: all from /etc/services.
-For mail protocols you can specify domain name not FQDN. It will be checked for MX DNS records first.
-For *smtp* protocol EHLO/STARTTLS commands will be send first to start TLS/SSL session.
+Allowed protocols: any of listed in /etc/services.
+
+For mail protocols (smtp, smtps, submission) you can specify domain name not server name. It will be checked for MX DNS records first.
+
+*EHLO/STARTTLS*, *STARTTLS*, *AUTH TLS*, *STLS* commands will be send first for protocols 'smtp', 'imap', 'ftp' and 'pop3' respectively to start TLS/SSL session.
 '''
 
 def parse_url(url_str: str) -> Tuple[str, str]:
@@ -424,18 +426,17 @@ class CheckCertBot:
         delete_obj = session.query(Servers).filter(Servers.url == url).filter(
                 Servers.chat_id == chat_id).one_or_none()
         if delete_obj is None:
-            send_message_to_user(context.bot, chat_id=id,
+            send_message_to_user(context.bot, chat_id=chat_id,
                                         disable_web_page_preview=1,
                                         text=f'{url} not found')
-        else:
-            session.delete(delete_obj)
-            deleted = True
+            session.close()
+            return
+        session.delete(delete_obj)
         session.commit()
         session.close()
-        if deleted:
-            send_message_to_user(context.bot, chat_id=chat_id,
-                                    disable_web_page_preview=1,
-                                    text=f'Successfully removed: {url}')
+        send_message_to_user(context.bot, chat_id=chat_id,
+                                disable_web_page_preview=1,
+                                text=f'Successfully removed: {url}')
 
     def reset_cmd(self, update, context) -> None:
         '''Process /reset command'''
