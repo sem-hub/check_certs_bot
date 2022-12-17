@@ -1,3 +1,9 @@
 checkcerts.sqlite3
 TOKEN
 __pycache__/
+build/
+dist/
+src/check_certs_bot.egg-info
+c.ini
+bin/generate_tlsa.txt
+config.ini
