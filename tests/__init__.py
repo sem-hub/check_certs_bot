@@ -1,4 +1,3 @@
 import importlib
 
-print('Find module path')
-importlib.find_loader('check_cert_lib', path='..')
+importlib.util.find_spec('check_cert_lib', '..')
