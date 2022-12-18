@@ -57,7 +57,7 @@ def strip_subject(subj) -> str:
     res = res.replace('<', '')
     return res.replace('>', '')
 
-def datetime_to_user_tz_str(utc_str: str, tz: int):
+def datetime_to_user_tz_str(utc_str: str, tz: int) -> str:
     '''Encode time string to datetime'''
     utc_dt = datetime.strptime(utc_str, '%Y-%m-%d %H:%M:%S.%f')
     utc_dt += timedelta(hours=tz)
