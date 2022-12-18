@@ -27,9 +27,10 @@ def tlsa(url: str):
     if len(addr) == 0:
         sys.exit(1)
     err, cert = get_cert_from_server(fqdn, addr[0].to_text(), port, proto)
-    if err:
+    if err or cert is None:         # Checking cert only for typing check bellow
         logging.error(err)
         sys.exit(1)
+    
     tlsa_value = generate_tlsa(cert, 3, 1, 1)
     return (f'_{port:d}._tcp.{fqdn}. IN TLSA 3 1 1 '
            f'{"".join("{:02x}".format(c) for c in tlsa_value)}')

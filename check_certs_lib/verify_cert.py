@@ -4,7 +4,7 @@ Set of functions for checking and verifying X509 certificates.
 
 from datetime import datetime, timezone
 import re
-from typing import List, Set, Union
+from typing import Union
 
 import certifi
 import pem
@@ -21,7 +21,7 @@ def get_days_before_expired(cert: crypto.X509) -> int:
     now_aware = datetime.utcnow().replace(tzinfo=UTC)
     return (expired_dt - now_aware).days
 
-def get_domains_from_cert(cert: crypto.X509) -> Set[str]:
+def get_domains_from_cert(cert: crypto.X509) -> set[str]:
     '''
     Get domains list from a certificate.
     Return: set of domains as strings.
@@ -56,7 +56,7 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
                 return True
     return False
 
-def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
+def verify_cert(certs_to_check: Union[list[crypto.X509], crypto.X509]) -> str:
     '''
     Main function to check certification validating.
     Get: list of X509 or one element X509

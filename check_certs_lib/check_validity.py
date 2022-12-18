@@ -2,7 +2,6 @@
 
 import re
 import socket
-from typing import Tuple
 from urllib.parse import urlparse
 
 
@@ -23,7 +22,7 @@ def is_valid_fqdn(fqdn: str) -> bool:
     allowed = re.compile(r'(?!-)[A-Z\d-]{1,63}(?<!-)$', re.IGNORECASE)
     return all(allowed.match(x) for x in fqdn.split('.'))
 
-def parse_and_check_url(url_str: str) -> Tuple[str, Tuple[str, str, int]]:
+def parse_and_check_url(url_str: str) -> tuple[str, tuple[str, str, int]]:
     '''
     Parse and check server's URL.
 

@@ -1,7 +1,6 @@
 '''A function for checking certificate.'''
 
 import logging
-from typing import Tuple
 
 from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.get_cert_from_server import get_chain_from_server
@@ -17,7 +16,7 @@ MAIL_PROTO = ('smtp', 'smtps', 'submission')
 NULL = ''
 
 # Return (error, result)
-def check_cert(url_str: str, **flags) -> Tuple[str, str]:
+def check_cert(url_str: str, **flags) -> tuple[str, str]:
     '''
     Make all checks for X509 certificate
 

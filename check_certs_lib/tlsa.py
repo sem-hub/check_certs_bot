@@ -4,7 +4,6 @@ Functions to make TLSA, reques it and check it.
 
 import hashlib
 import logging
-from typing import Tuple
 
 from OpenSSL import crypto
 
@@ -32,7 +31,7 @@ def generate_tlsa(cert: crypto.X509, usage: int, selector: int,
     sha.update(dump)
     return sha.digest()
 
-def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> Tuple[str, str]:
+def check_tlsa(fqdn: str, port: int, cert: crypto.X509) -> tuple[str, str]:
     '''
     Construct TLSA, request DNS TLSA record, compare them.
 

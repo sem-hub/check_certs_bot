@@ -1,7 +1,6 @@
 '''DNS utilities.'''
 
 import logging
-from typing import Dict, List
 
 import dns.dnssec
 import dns.rcode
@@ -74,7 +73,7 @@ def get_dns_request(dname: str, rtype: str) -> list:
             result.append(rdata)
     return result
 
-def get_authority_ns_for(dname: str) -> Dict[str, List[str]]:
+def get_authority_ns_for(dname: str) -> dict[str, list[str]]:
     '''
     Get list of IP addresses for authority DNS server for this domain.
     Need for get_dnssec_request().
@@ -88,7 +87,7 @@ def get_authority_ns_for(dname: str) -> Dict[str, List[str]]:
     default_resolver = dns.resolver.get_default_resolver()
     nameservers = default_resolver.nameservers
 
-    authority: Dict[str, list] = {}
+    authority: dict[str, list] = {}
     sdomain: str = ''
     for sublevel in dlevel:
         sdomain = sublevel + '.' + sdomain
@@ -122,7 +121,7 @@ def get_authority_ns_for(dname: str) -> Dict[str, List[str]]:
         else:
             rrset = response[0].answer[0]
 
-        ns: List[str] = []
+        ns: list[str] = []
         for rr in rrset:
             if rr.rdtype == dns.rdatatype.NS:
                 aserver = rr.target

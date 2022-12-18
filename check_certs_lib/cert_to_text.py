@@ -1,7 +1,7 @@
 '''Set of functions for certificat visualisation.'''
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Callable
 
 from OpenSSL import crypto
 
@@ -9,7 +9,7 @@ from OpenSSL import crypto
 UTC = timezone.utc
 
 # Text markups
-def need_bold(flag: bool):
+def need_bold(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string bold if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
@@ -17,7 +17,7 @@ def need_bold(flag: bool):
         return text
     return helper
 
-def need_italic(flag: bool):
+def need_italic(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string italic if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
@@ -25,7 +25,7 @@ def need_italic(flag: bool):
         return text
     return helper
 
-def need_strike(flag: bool):
+def need_strike(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string strike if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
@@ -33,7 +33,7 @@ def need_strike(flag: bool):
         return text
     return helper
 
-def need_code(flag: bool):
+def need_code(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string as code if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
         if flag:
@@ -41,7 +41,7 @@ def need_code(flag: bool):
         return text
     return helper
 
-def need_pre(flag: bool):
+def need_pre(flag: bool) -> Callable[[str], str]:
     '''
     A closure to make a string preformated if we need it.
     Or just unchange it.

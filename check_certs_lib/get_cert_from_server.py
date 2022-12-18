@@ -5,7 +5,7 @@ EHLO/STARTTLS commands for SMTP.
 '''
 
 import socket
-from typing import Tuple, List, Union
+from typing import Optional
 
 from OpenSSL import SSL, crypto
 import timeout_decorator
@@ -16,7 +16,7 @@ NULL = ''
 NoResult: list = []
 
 @timeout_decorator.timeout(TIMEOUT)
-def do_handshake_with_timeout(conn):
+def do_handshake_with_timeout(conn: SSL.Connection):
     '''
     A stock do_handshake() can't make stop on timeout. It hangs forever.
     This function using timeout_decorator to change this behaviour.
@@ -24,7 +24,7 @@ def do_handshake_with_timeout(conn):
     conn.do_handshake()
 
 def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
-        ) -> Tuple[str, List[crypto.X509]]:
+        ) -> tuple[str, list[crypto.X509]]:
     '''
     Get full certificates chain from a server. It respects timeouts.
     Get:
@@ -90,7 +90,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
     return (NULL, chain)
 
 def get_cert_from_server(hostname: str, addr: str, port: int, proto: str
-        ) -> Tuple[str, Union[crypto.X509, None]]:
+        ) -> tuple[str, Optional[crypto.X509]]:
     '''
     Get only one certificate of the server. It's just a wrapper for
     get_chain_from_server()[0].
