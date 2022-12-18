@@ -12,6 +12,28 @@ from sqlalchemy.orm import sessionmaker, relationship
 
 Base = declarative_base()
 
+class Users(Base):
+    '''Save users info'''
+    __tablename__ = 'users'
+
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    full_name = Column(String)
+    language_code = Column(String)
+    timezone = Column(Integer, default=0)
+    first_met = Column(String, default=datetime.utcnow)
+    last_activity = Column(String, default='')
+    status = Column(String, default='')
+
+    def __repr__(self):
+        return (f'<Users(id={self.id!r}, '
+                f'name={self.name!r}, '
+                f'full_name={self.full_name!r}, '
+                f'language_code={self.language_code!r}, '
+                f'first_met={self.first_met!r}, '
+                f'last_activity={self.last_activity!r}, '
+                f'status={self.status!r})>')
+
 class Servers(Base):
     '''Save a list of URLs to check and all info about them'''
     __tablename__ = 'servers'
@@ -37,28 +59,6 @@ class Servers(Base):
                 f'last_ok={self.last_ok!r}, '
                 f'status={self.status!r}, '
                 f'cert_id={self.cert_id!r})>')
-
-class Users(Base):
-    '''Save users info'''
-    __tablename__ = 'users'
-
-    id = Column(String, primary_key=True)
-    name = Column(String)
-    full_name = Column(String)
-    language_code = Column(String)
-    timezone = Column(Integer, default=0)
-    first_met = Column(String, default=datetime.utcnow)
-    last_activity = Column(String, default='')
-    status = Column(String, default='')
-
-    def __repr__(self):
-        return (f'<Users(id={self.id!r}, '
-                f'name={self.name!r}, '
-                f'full_name={self.full_name!r}, '
-                f'language_code={self.language_code!r}, '
-                f'first_met={self.first_met!r}, '
-                f'last_activity={self.last_activity!r}, '
-                f'status={self.status!r})>')
 
 class Activity(Base):
     '''Save user activities'''
