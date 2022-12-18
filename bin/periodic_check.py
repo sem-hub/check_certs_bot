@@ -16,6 +16,7 @@ import logging
 from multiprocessing import Pool
 import re
 import sys
+from typing import Callable
 
 from sqlalchemy import func
 
@@ -25,6 +26,8 @@ from check_certs_lib.logging_black_white_lists import (
         Blacklist, add_filter_to_all_handlers)
 from check_certs_lib.send_to_chat import send_to_chats
 
+
+helper: Callable[[tuple], Callable]
 
 Server = namedtuple('Server',
         ['count', 'url', 'cert_id', 'warn_before_expired', 'status'])

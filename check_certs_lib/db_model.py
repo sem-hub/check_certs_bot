@@ -3,6 +3,7 @@ DB model to work with SQL Alchemy
 '''
 
 from datetime import datetime
+from typing import TypeAlias
 
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
@@ -25,7 +26,7 @@ class Servers(Base):
     status = Column(String, default='')
     cert_id = Column(String, default='')
 
-    user = relationship('Users')
+    user: Users = relationship('Users')
 
     def __repr__(self):
         return (f'<Servers(when_added={self.when_added!r}, '
@@ -68,7 +69,7 @@ class Activity(Base):
     cmd = Column(String)
     date = Column(String, default=datetime.utcnow)
 
-    user = relationship('Users')
+    user: Users = relationship('Users')
 
     def __repr__(self):
         return (f'<Activity(id={self.id}, '

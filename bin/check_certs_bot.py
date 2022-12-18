@@ -35,7 +35,6 @@ import queue
 import re
 import sys
 import threading
-from typing import Tuple, NoReturn
 
 import rpyc
 from rpyc.utils.server import ThreadedServer
@@ -82,7 +81,7 @@ For mail protocols (smtp, smtps, submission) you can specify domain name not ser
 *EHLO/STARTTLS*, *STARTTLS*, *AUTH TLS*, *STLS* commands will be send first for protocols 'smtp', 'imap', 'ftp' and 'pop3' respectively to start TLS/SSL session.
 '''
 
-def parse_url(url_str: str) -> Tuple[str, str]:
+def parse_url(url_str: str) -> tuple[str, str]:
     '''
     Parse and check URL.
     Return: tuple(error, result)
@@ -196,8 +195,8 @@ class CheckCertBot:
             user = Users(id=message.chat_id, name=message.chat.username,
                  full_name=message.chat.first_name+' '+message.chat.last_name,
                  language_code = message.from_user.language_code,
-                 first_met = datetime.utcnow(),
-                 last_activity = datetime.utcnow())
+                 first_met = str(datetime.utcnow()),
+                 last_activity = str(datetime.utcnow()))
             session.add(user)
         else:
             if users_res.status.lower() == 'ban':
@@ -216,7 +215,7 @@ class CheckCertBot:
 
         # Write his activity
         activity = Activity(user_id = message.chat_id, cmd = cmd,
-                date = datetime.utcnow())
+                date = str(datetime.utcnow()))
         session.add(activity)
         session.commit()
         session.close()
@@ -543,7 +542,7 @@ def async_run_func(bot, chat_id, db, url, *args) -> None:
     session.commit()
     session.close()
 
-def main() -> NoReturn:
+def main() -> None:
     '''Main function'''
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--conf', type=str, required=True)

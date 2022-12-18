@@ -80,7 +80,7 @@ def verify_cert(certs_to_check: Union[List[crypto.X509], crypto.X509]) -> str:
         raw_ca = ca_f.read()
     for ca_cert in pem.parse(raw_ca):
         store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM,
-                                                str(ca_cert)))
+                                                ca_cert.as_bytes()))
 
 # Need we very strict checking flags?
 #    store.set_flags(crypto.X509StoreFlags.X509_STRICT |

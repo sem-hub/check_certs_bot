@@ -1,6 +1,7 @@
 '''Set of functions for certificat visualisation.'''
 
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from OpenSSL import crypto
 
@@ -63,12 +64,14 @@ def datetime_to_user_tz_str(utc_str: str, tz: int) -> str:
     utc_dt += timedelta(hours=tz)
     return utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
-def decode_generalized_time(gtime: bytes) -> datetime:
+def decode_generalized_time(gtime: Optional[bytes]) -> datetime:
     '''Decode byte string as generalized time (UTC).'''
+    if gtime is None:
+        return datetime(0,0,0)
     return datetime.strptime(gtime.decode('utf8'), '%Y%m%d%H%M%SZ'
             ).replace(tzinfo=UTC)
 
-def list_of_tuples(indent: str, tuples: tuple) -> str:
+def list_of_tuples(indent: str, tuples: list[tuple[bytes,bytes]]) -> str:
     '''
     Return tuple as sting.
     Try to decode well known (RFC2253) x500 attribute codes.
@@ -83,7 +86,7 @@ def list_of_tuples(indent: str, tuples: tuple) -> str:
             }
     for (name, val) in tuples:
         if name in codes.keys():
-            text.append(indent + codes[name] + ': ' + val.decode('utf8'))
+            text.append(indent + codes[name.decode('utf-8')] + ': ' + val.decode('utf8'))
         else:
             text.append(indent + name.decode('utf8') + ': ' + \
                     val.decode('utf8'))
