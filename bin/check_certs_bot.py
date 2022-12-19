@@ -72,7 +72,7 @@ or a command:
 /unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry.
 /remove \\[_protocol_://]hostname\\[:_port_] - remove an entry from periodical checking list.
 /reset  - reset all periodical checking list (WARNINNG! No confirm will be provided).
-/timezone [+-N] - show or set timezone correction from UTC. In hours.
+/timezone \\[+-N] - show or set timezone correction from UTC. In hours.
 
 Allowed protocols: any of listed in /etc/services.
 
