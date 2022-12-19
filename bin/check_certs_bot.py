@@ -51,7 +51,7 @@ TOKEN_FILE = '/var/spool/check_certs/TOKEN'
 
 remote_messages: queue.Queue = queue.Queue()
 
-HELP_TEXT='''
+HELP_TEXT = '''
 A bot for checking SSL/TLS servers certificates.
 
 Enter:
@@ -81,6 +81,7 @@ For mail protocols (smtp, smtps, submission) you can specify domain name not ser
 *EHLO/STARTTLS*, *STARTTLS*, *AUTH TLS*, *STLS* commands will be send first for protocols 'smtp', 'imap', 'ftp' and 'pop3' respectively to start TLS/SSL session.
 '''
 
+
 def parse_url(url_str: str) -> tuple[str, str]:
     '''
     Parse and check URL.
@@ -92,6 +93,7 @@ def parse_url(url_str: str) -> tuple[str, str]:
         url = 'https://' + url
     err, (scheme, hostname, port) = parse_and_check_url(url)
     return (err, f'{scheme}://{hostname}:{port}')
+
 
 def send_message_to_user(bot, **kwargs) -> None:
     '''
@@ -109,6 +111,7 @@ def send_message_to_user(bot, **kwargs) -> None:
             logging.error(str(err))
         attemps += 1
 
+
 def send_long_message(bot, chat_id, text: str) -> None:
     '''
     Split long text and send it as separated messages.
@@ -116,25 +119,30 @@ def send_long_message(bot, chat_id, text: str) -> None:
     max_len = telegram.constants.MAX_MESSAGE_LENGTH
     for i in range(0, len(text), max_len):
         send_message_to_user(bot, chat_id=chat_id, parse_mode='HTML',
-                disable_web_page_preview=1,
-                text=text[i:i+max_len])
+                            disable_web_page_preview=1,
+                            text=text[i:i+max_len])
+
 
 class RPyCService(rpyc.Service):
     '''RPYC service to get messages for an user. Using in periodic_check.py'''
+
     def exposed_add_message(self, chat_id, msg) -> None:
         '''RPC function'''
         remote_messages.put([chat_id, msg])
+
 
 def check_queue(context) -> None:
     '''Check queue with messages for users got from RPYC.'''
     while not remote_messages.empty():
         chat_id, msg = remote_messages.get()
         send_message_to_user(context.bot, chat_id=chat_id,
-                disable_web_page_preview=1, text=msg)
+                            disable_web_page_preview=1, text=msg)
         remote_messages.task_done()
+
 
 class CheckCertBot:
     '''Main class for the bot'''
+
     def __init__(self, bot_token, db_url):
         self.updater = Updater(token=bot_token)
 
@@ -149,22 +157,24 @@ class CheckCertBot:
         dispatcher.add_handler(start_cmd_handler)
         id_cmd_handler = CommandHandler('id', self.id_cmd)
         dispatcher.add_handler(id_cmd_handler)
-        list_cmd_handler = CommandHandler('list', self.list_cmd, pass_args=True)
+        list_cmd_handler = CommandHandler(
+            'list', self.list_cmd, pass_args=True)
         dispatcher.add_handler(list_cmd_handler)
         add_cmd_handler = CommandHandler('add', self.add_cmd, pass_args=True)
         dispatcher.add_handler(add_cmd_handler)
-        hold_cmd_handler = CommandHandler('hold', self.hold_cmd, pass_args=True)
+        hold_cmd_handler = CommandHandler(
+            'hold', self.hold_cmd, pass_args=True)
         dispatcher.add_handler(hold_cmd_handler)
         unhold_cmd_handler = CommandHandler('unhold', self.unhold_cmd,
-                pass_args=True)
+                                            pass_args=True)
         dispatcher.add_handler(unhold_cmd_handler)
         remove_cmd_handler = CommandHandler('remove', self.remove_cmd,
-                pass_args=True)
+                                            pass_args=True)
         dispatcher.add_handler(remove_cmd_handler)
         reset_cmd_handler = CommandHandler('reset', self.reset_cmd)
         dispatcher.add_handler(reset_cmd_handler)
         timezone_cmd_handler = CommandHandler('timezone', self.timezone_cmd,
-                pass_args=True)
+                                            pass_args=True)
         dispatcher.add_handler(timezone_cmd_handler)
 
         unknown_cmd_handler = MessageHandler(Filters.command, self.unknown_cmd)
@@ -185,18 +195,18 @@ class CheckCertBot:
         allowed = True
         session = self.db.get_session()
         users_res = session.query(Users).filter(
-                Users.id == message.chat_id).one_or_none()
+            Users.id == message.chat_id).one_or_none()
         activity_res = session.query(Activity).filter(
-                Activity.user_id == message.chat_id).filter(
-                Activity.date.like(
-                    datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')+'%')).all()
+            Activity.user_id == message.chat_id).filter(
+            Activity.date.like(
+                datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')+'%')).all()
         # A new user
         if users_res is None:
             user = Users(id=message.chat_id, name=message.chat.username,
-                 full_name=message.chat.first_name+' '+message.chat.last_name,
-                 language_code = message.from_user.language_code,
-                 first_met = str(datetime.utcnow()),
-                 last_activity = str(datetime.utcnow()))
+                        full_name=message.chat.first_name+' '+message.chat.last_name,
+                        language_code=message.from_user.language_code,
+                        first_met=str(datetime.utcnow()),
+                        last_activity=str(datetime.utcnow()))
             session.add(user)
         else:
             if users_res.status.lower() == 'ban':
@@ -206,7 +216,7 @@ class CheckCertBot:
                 # Flood protect
                 if len(activity_res) > 0:
                     logging.warning('Flood activity: %s - %d times per '
-                        'seconds. Blocked.', message.chat_id, len(activity_res))
+                                    'seconds. Blocked.', message.chat_id, len(activity_res))
                     allowed = False
             users_res.last_activity = datetime.utcnow()
 
@@ -214,8 +224,8 @@ class CheckCertBot:
             cmd = '!' + cmd
 
         # Write his activity
-        activity = Activity(user_id = message.chat_id, cmd = cmd,
-                date = str(datetime.utcnow()))
+        activity = Activity(user_id=message.chat_id, cmd=cmd,
+                            date=str(datetime.utcnow()))
         session.add(activity)
         session.commit()
         session.close()
@@ -230,24 +240,24 @@ class CheckCertBot:
         '''Process /help command'''
         if not self.user_access('/help', update.message):
             send_message_to_user(context.bot,
-                    chat_id=update.message.chat_id,
-                    text='You are banned')
+                                chat_id=update.message.chat_id,
+                                text='You are banned')
             return
 
         # Remove ReplyKeyboard if it was there
-        #reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
-        #old_message = context.bot.send_message(chat_id=update.message.chat_id,
+        # reply_markup = telegram.ReplyKeyboardRemove(remove_keyboard=True)
+        # old_message = context.bot.send_message(chat_id=update.message.chat_id,
         #       text='trying', reply_markup=reply_markup,
         #       reply_to_message_id=update.message.message_id)
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                    parse_mode='Markdown', text=HELP_TEXT)
+                            parse_mode='Markdown', text=HELP_TEXT)
 
     def id_cmd(self, update, context) -> None:
         '''Process /id command'''
         chat_id = str(update.message.chat_id)
         if not self.user_access('/id', update.message):
             send_message_to_user(context.bot, chat_id=chat_id,
-                    text='You are banned')
+                                text='You are banned')
             return
         session = self.db.get_session()
         user = session.query(Users).filter(Users.id == chat_id).one_or_none()
@@ -257,9 +267,9 @@ class CheckCertBot:
         if status == '':
             status = 'normal user'
         text = (f'{update.message.chat_id}: {update.message.chat.username} '
-            f'{update.message.chat.first_name} {update.message.chat.last_name} '
-            f'{update.message.from_user.language_code}'
-            f' timezone=UTC{tz:+d} status={status}')
+                f'{update.message.chat.first_name} {update.message.chat.last_name} '
+                f'{update.message.from_user.language_code}'
+                f' timezone=UTC{tz:+d} status={status}')
         send_message_to_user(context.bot, chat_id=chat_id, text=text)
 
     def list_cmd(self, update, context) -> None:
@@ -275,8 +285,8 @@ class CheckCertBot:
         session.close()
         # Fields to show. For "full" and "short" list.
         fields: tuple = (
-                'when_added', 'url', 'warn_before_expired',
-                'last_checked', 'status')
+            'when_added', 'url', 'warn_before_expired',
+            'last_checked', 'status')
         if len(args) > 0 and args[0] == 'short':
             fields = ('url', 'last_checked', 'status')
 
@@ -304,7 +314,7 @@ class CheckCertBot:
             output = ['Empty']
 
         send_long_message(context.bot, update.message.chat_id,
-                '\n'.join(output))
+                        '\n'.join(output))
 
     def add_cmd(self, update, context) -> None:
         '''Process /add command'''
@@ -314,12 +324,12 @@ class CheckCertBot:
             return
         if len(args) < 1:
             send_message_to_user(context.bot, chat_id=chat_id,
-                    text='Use /add URL [days]')
+                                text='Use /add URL [days]')
             return
         error, url = parse_url(args[0])
         if error != '':
             send_message_to_user(context.bot, chat_id=chat_id,
-                    disable_web_page_preview=1, text=f'Parsing error: {error}')
+                                disable_web_page_preview=1, text=f'Parsing error: {error}')
             return
         # Default days to warn
         days = 5
@@ -328,26 +338,27 @@ class CheckCertBot:
                 days = int(args[1])
             else:
                 send_message_to_user(context.bot, chat_id=chat_id,
-                        text='days must be integer')
+                                    text='days must be integer')
                 return
 
         # Check for duplicates
         session = self.db.get_session()
         query_res = session.query(Servers.url).filter(Servers.url == url
-                             ).filter(Servers.chat_id == chat_id).one_or_none()
+                                            ).filter(Servers.chat_id == chat_id).one_or_none()
         if query_res is not None:
             send_message_to_user(context.bot, chat_id=chat_id,
-                    disable_web_page_preview=1, text=f'{url} already exists')
+                                disable_web_page_preview=1, text=f'{url} already exists')
             session.close()
             return
-        new_server = Servers(url=url, chat_id=chat_id, warn_before_expired=days)
+        new_server = Servers(url=url, chat_id=chat_id,
+                            warn_before_expired=days)
         session.add(new_server)
         session.commit()
         session.close()
 
         send_message_to_user(context.bot, chat_id=chat_id,
-                                    disable_web_page_preview=1,
-                                    text=f'Successfully added: {url}')
+                            disable_web_page_preview=1,
+                            text=f'Successfully added: {url}')
 
     def hold_cmd(self, update, context) -> None:
         '''Process /hold command'''
@@ -357,12 +368,13 @@ class CheckCertBot:
             return
         if len(args) < 1:
             send_message_to_user(context.bot, chat_id=chat_id,
-                    text='Use /hold URL')
+                                text='Use /hold URL')
             return
         error, url = parse_url(args[0])
         if error != '':
             send_message_to_user(context.bot, chat_id=chat_id,
-                    disable_web_page_preview=1, text=f'Parsing error: {error}')
+                                disable_web_page_preview=1, 
+                                text=f'Parsing error: {error}')
             return
 
         session = self.db.get_session()
@@ -373,8 +385,8 @@ class CheckCertBot:
         session.close()
 
         send_message_to_user(context.bot, chat_id=chat_id,
-                                    disable_web_page_preview=1,
-                                    text=f'Hold checking for: {url}')
+                            disable_web_page_preview=1,
+                            text=f'Hold checking for: {url}')
 
     def unhold_cmd(self, update, context) -> None:
         '''Process /unhold command'''
@@ -384,13 +396,13 @@ class CheckCertBot:
             return
         if len(args) < 1:
             send_message_to_user(context.bot, chat_id=chat_id,
-                                        text='Use /unhold URL')
+                                text='Use /unhold URL')
             return
         (error, url) = parse_url(args[0])
         if error != '':
             send_message_to_user(context.bot, chat_id=chat_id,
-                                        disable_web_page_preview=1,
-                                        text=f'Parsing error: {error}')
+                                disable_web_page_preview=1,
+                                text=f'Parsing error: {error}')
             return
 
         session = self.db.get_session()
@@ -401,8 +413,8 @@ class CheckCertBot:
         session.close()
 
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                    disable_web_page_preview=1,
-                                    text=f'Unhold checking for: {url}')
+                            disable_web_page_preview=1,
+                            text=f'Unhold checking for: {url}')
 
     def remove_cmd(self, update, context) -> None:
         '''Process /remove command'''
@@ -413,29 +425,29 @@ class CheckCertBot:
             return
         if len(args) < 1:
             send_message_to_user(context.bot, chat_id=chat_id,
-                                        text='Use /remove URL')
+                                text='Use /remove URL')
             return
         error, url = parse_url(args[0])
         if error != '':
             send_message_to_user(context.bot, chat_id=chat_id,
-                                        disable_web_page_preview=1,
-                                        text=f'Parsing error: {error}')
+                                disable_web_page_preview=1,
+                                text=f'Parsing error: {error}')
             return
         session = self.db.get_session()
         delete_obj = session.query(Servers).filter(Servers.url == url).filter(
-                Servers.chat_id == chat_id).one_or_none()
+            Servers.chat_id == chat_id).one_or_none()
         if delete_obj is None:
             send_message_to_user(context.bot, chat_id=chat_id,
-                                        disable_web_page_preview=1,
-                                        text=f'{url} not found')
+                                disable_web_page_preview=1,
+                                text=f'{url} not found')
             session.close()
             return
         session.delete(delete_obj)
         session.commit()
         session.close()
         send_message_to_user(context.bot, chat_id=chat_id,
-                                disable_web_page_preview=1,
-                                text=f'Successfully removed: {url}')
+                            disable_web_page_preview=1,
+                            text=f'Successfully removed: {url}')
 
     def reset_cmd(self, update, context) -> None:
         '''Process /reset command'''
@@ -447,7 +459,7 @@ class CheckCertBot:
         session.commit()
         session.close()
         send_message_to_user(context.bot, chat_id=chat_id,
-                                    text='Successfully reseted')
+                            text='Successfully reseted')
 
     def timezone_cmd(self, update, context) -> None:
         '''Process /timezone command'''
@@ -458,7 +470,7 @@ class CheckCertBot:
         chat_id = str(update.message.chat_id)
         if len(args) != 1:
             send_message_to_user(context.bot, chat_id=chat_id,
-                    text='Only one argument allowed and mandatory: +-N')
+                                text='Only one argument allowed and mandatory: +-N')
             return
 
         failure = False
@@ -475,8 +487,8 @@ class CheckCertBot:
 
         if failure:
             send_message_to_user(context.bot, chat_id=chat_id,
-                    text='An argument must be: [+-]N. Where N is an integer '
-                            'from 0 to 12.')
+                                text='An argument must be: [+-]N. Where N is an integer '
+                                'from 0 to 12.')
             return
 
         session = self.db.get_session()
@@ -485,14 +497,14 @@ class CheckCertBot:
         session.commit()
         session.close()
         send_message_to_user(context.bot, chat_id=chat_id,
-                text=f'Timezone set as UTC{tz:+d}')
+                            text=f'Timezone set as UTC{tz:+d}')
 
     def unknown_cmd(self, update, context) -> None:
         '''Process user errors in command'''
         if not self.user_access('unknown', update.message):
             return
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
-                                    text='Unknown command. Try /help.')
+                            text='Unknown command. Try /help.')
 
     def message(self, update, context) -> None:
         '''Process not command message from the user'''
@@ -504,23 +516,24 @@ class CheckCertBot:
         error, url = parse_url(url_text)
         if error != '':
             send_message_to_user(context.bot, chat_id=chat_id,
-                                        disable_web_page_preview=1, text=error)
+                                disable_web_page_preview=1, text=error)
             return
         if len(args) > 0 and (len(args) > 2 or
-                len(set(args)-set(allowed_cmd)) > 0):
+                            len(set(args)-set(allowed_cmd)) > 0):
             send_message_to_user(context.bot, chat_id=chat_id,
-                                        text='wrong arguments')
+                                text='wrong arguments')
             return
 
         # we need no_tlsa style flags. Convert it from no-tlsa.
         args = [a.replace('-', '_') for a in args]
         send_message_to_user(context.bot, chat_id=chat_id,
-                                    disable_web_page_preview=1,
-                                    text=f'Checking certificate for: {url}')
+                            disable_web_page_preview=1,
+                            text=f'Checking certificate for: {url}')
         proc = Process(target=async_run_func, args=(context.bot, chat_id,
-                                                     self.db, url,
-                                                     *args))
+                                                    self.db, url,
+                                                    *args))
         proc.start()
+
 
 def async_run_func(bot, chat_id, db, url, *args) -> None:
     '''Run checks for the URL as an async job'''
@@ -542,6 +555,7 @@ def async_run_func(bot, chat_id, db, url, *args) -> None:
     session.commit()
     session.close()
 
+
 def main() -> None:
     '''Main function'''
     parser = argparse.ArgumentParser()
@@ -559,27 +573,28 @@ def main() -> None:
         db_url = config['DB']['url']
     except KeyError:
         logging.error('You must specify both Bot Token and DB URL in config '
-                        'file')
+                    'file')
         sys.exit(1)
 
     if args.debug:
         logging.basicConfig(
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                level=logging.DEBUG)
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            level=logging.DEBUG)
     else:
         logging.basicConfig(
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                level=logging.WARNING)
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            level=logging.WARNING)
 
     rpyc_log = logging.getLogger('RPYC')
     rpyc_log.setLevel(logging.ERROR)
     rpyc_server = ThreadedServer(RPyCService, port=18861, logger=rpyc_log)
-    thr = threading.Thread(target = rpyc_server.start)
+    thr = threading.Thread(target=rpyc_server.start)
     thr.daemon = True
     thr.start()
 
     bot = CheckCertBot(token, db_url)
     bot.start()
+
 
 if __name__ == '__main__':
     main()

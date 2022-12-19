@@ -33,7 +33,7 @@ def tlsa(url: str):
     
     tlsa_value = generate_tlsa(cert, 3, 1, 1)
     return (f'_{port:d}._tcp.{fqdn}. IN TLSA 3 1 1 '
-           f'{"".join("{:02x}".format(c) for c in tlsa_value)}')
+            f'{"".join("{:02x}".format(c) for c in tlsa_value)}')
 
 def main():
     '''Main function'''

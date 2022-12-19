@@ -9,6 +9,8 @@ from OpenSSL import crypto
 UTC = timezone.utc
 
 # Text markups
+
+
 def need_bold(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string bold if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
@@ -16,6 +18,7 @@ def need_bold(flag: bool) -> Callable[[str], str]:
             return '<b>' + text + '</b>'
         return text
     return helper
+
 
 def need_italic(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string italic if we need it. Or just unchange it.'''
@@ -25,6 +28,7 @@ def need_italic(flag: bool) -> Callable[[str], str]:
         return text
     return helper
 
+
 def need_strike(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string strike if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
@@ -33,6 +37,7 @@ def need_strike(flag: bool) -> Callable[[str], str]:
         return text
     return helper
 
+
 def need_code(flag: bool) -> Callable[[str], str]:
     '''A closure to make a string as code if we need it. Or just unchange it.'''
     def helper(text: str) -> str:
@@ -40,6 +45,7 @@ def need_code(flag: bool) -> Callable[[str], str]:
             return '<code>' + text + '</code>'
         return text
     return helper
+
 
 def need_pre(flag: bool) -> Callable[[str], str]:
     '''
@@ -52,11 +58,13 @@ def need_pre(flag: bool) -> Callable[[str], str]:
         return text
     return helper
 
+
 def strip_subject(subj) -> str:
     '''Strip certificate subject from tags characters (<>).'''
     res = str(subj)
     res = res.replace('<', '')
     return res.replace('>', '')
+
 
 def datetime_to_user_tz_str(utc_str: str, tz: int) -> str:
     '''Encode time string to datetime'''
@@ -64,34 +72,39 @@ def datetime_to_user_tz_str(utc_str: str, tz: int) -> str:
     utc_dt += timedelta(hours=tz)
     return utc_dt.strftime('%Y-%m-%d %H:%M:%S')
 
+
 def decode_generalized_time(gtime: Optional[bytes]) -> datetime:
     '''Decode byte string as generalized time (UTC).'''
     if gtime is None:
-        return datetime(0,0,0)
+        return datetime(0, 0, 0)
     return datetime.strptime(gtime.decode('utf8'), '%Y%m%d%H%M%SZ'
-            ).replace(tzinfo=UTC)
+                            ).replace(tzinfo=UTC)
 
-def list_of_tuples(indent: str, tuples: list[tuple[bytes,bytes]]) -> str:
+
+def list_of_tuples(indent: str, tuples: list[tuple[bytes, bytes]]) -> str:
     '''
     Return tuple as sting.
     Try to decode well known (RFC2253) x500 attribute codes.
     '''
     text: list = []
-    codes = {'C': 'countryName',
-             'O': 'organizationName',
-             'ST': 'stateOrProvinceName',
-             'L': 'localityName',
-             'OU': 'organizationUnitName',
-             'CN': 'commonName'
-            }
+    codes = {
+        'C': 'countryName',
+        'O': 'organizationName',
+        'ST': 'stateOrProvinceName',
+        'L': 'localityName',
+        'OU': 'organizationUnitName',
+        'CN': 'commonName'
+    }
     for (name, val) in tuples:
         if name in codes.keys():
-            text.append(indent + codes[name.decode('utf-8')] + ': ' + val.decode('utf8'))
+            text.append(
+                indent + codes[name.decode('utf-8')] + ': ' + val.decode('utf8'))
         else:
-            text.append(indent + name.decode('utf8') + ': ' + \
-                    val.decode('utf8'))
+            text.append(indent + name.decode('utf8') + ': ' +
+                        val.decode('utf8'))
 
     return '\n'.join(map(str, text))
+
 
 def x509_alt_names(indent: str, anames: str) -> str:
     '''Convert alternate names to string.'''
@@ -102,6 +115,7 @@ def x509_alt_names(indent: str, anames: str) -> str:
         text.append(f'{indent}{line}')
 
     return '\n'.join(map(str, text))
+
 
 def cert_to_text(x509: crypto.X509, need_markup: bool = False) -> str:
     '''Return x509 certificate as a formated string'''
@@ -118,10 +132,12 @@ def cert_to_text(x509: crypto.X509, need_markup: bool = False) -> str:
     text.append(f'   {b("Cert ID")}: {x509.get_serial_number():X}')
     text.append(f'   {b("Issuer")}:')
     text.append(list_of_tuples('      ',
-                    x509.get_issuer().get_components()))
-    text.append(f'   {b("Issued")}: {issued_dt.strftime("%b %d %H:%M:%S %Y %Z")}')
+                            x509.get_issuer().get_components()))
+    text.append(
+        f'   {b("Issued")}: {issued_dt.strftime("%b %d %H:%M:%S %Y %Z")}')
     text.append(f'     days ago: {(now_aware - issued_dt).days}')
-    text.append(f'   {b("Expired")}: {expired_dt.strftime("%b %d %H:%M:%S %Y %Z")}')
+    text.append(
+        f'   {b("Expired")}: {expired_dt.strftime("%b %d %H:%M:%S %Y %Z")}')
     text.append(f'     days more: {(expired_dt - now_aware).days}')
     text.append(f'   {b("subject")}:')
     text.append(list_of_tuples('      ', x509.get_subject().get_components()))
