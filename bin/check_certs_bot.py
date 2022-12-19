@@ -41,7 +41,8 @@ from rpyc.utils.server import ThreadedServer
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-from check_certs_lib.cert_to_text import datetime_to_user_tz_str
+from check_certs_lib.get_cert_from_server import get_chain_from_server
+from check_certs_lib.cert_to_text import datetime_to_user_tz_str, cert_to_text
 from check_certs_lib.check_certs import check_cert
 from check_certs_lib.check_validity import parse_and_check_url
 from check_certs_lib.db_model import Servers, Users, Activity, DB
@@ -176,6 +177,10 @@ class CheckCertBot:
         timezone_cmd_handler = CommandHandler('timezone', self.timezone_cmd,
                                             pass_args=True)
         dispatcher.add_handler(timezone_cmd_handler)
+
+        dissect_cmd_handler = CommandHandler('dissect', self.dissect_cmd,
+                                            pass_args=True)
+        dispatcher.add_handler(dissect_cmd_handler)
 
         unknown_cmd_handler = MessageHandler(Filters.command, self.unknown_cmd)
         dispatcher.add_handler(unknown_cmd_handler)
@@ -516,12 +521,26 @@ class CheckCertBot:
         send_message_to_user(context.bot, chat_id=chat_id,
                             text=f'Timezone set as UTC{tz:+d}')
 
+    def dissect_cmd(self, update, context) -> None:
+        '''Process /dissect command. Only admin can do it. Undocumented.'''
+        args = context.args
+        chat_id = update.message.chat_id
+        if not self.user_access(f'/dissect {args}', update.message):
+            return
+        if len(args) < 4:
+            send_message_to_user(context.bot, chat_id=chat_id,
+                                text='<hostname> <ip> <port> <proto>')
+        proc = Process(target=async_dissect, args=(context.bot, chat_id, *args))
+        proc.start()
+
+
     def unknown_cmd(self, update, context) -> None:
         '''Process user errors in command'''
         if not self.user_access('unknown', update.message):
             return
         send_message_to_user(context.bot, chat_id=update.message.chat_id,
                             text='Unknown command. Try /help.')
+
 
     def message(self, update, context) -> None:
         '''Process not command message from the user'''
@@ -546,13 +565,12 @@ class CheckCertBot:
         send_message_to_user(context.bot, chat_id=chat_id,
                             disable_web_page_preview=1,
                             text=f'Checking certificate for: {url}')
-        proc = Process(target=async_run_func, args=(context.bot, chat_id,
-                                                    self.db, url,
-                                                    *args))
+        proc = Process(target=async_check_cert, args=(context.bot, chat_id,
+                                                    self.db, url, *args))
         proc.start()
 
 
-def async_run_func(bot, chat_id, db, url, *args) -> None:
+def async_check_cert(bot, chat_id, db, url, *args) -> None:
     '''Run checks for the URL as an async job'''
     kwargs = {v: True for (_, v) in enumerate(args)}
     error, result = check_cert(url, need_markup=True, **kwargs)
@@ -571,6 +589,18 @@ def async_run_func(bot, chat_id, db, url, *args) -> None:
             res.last_ok = datetime.utcnow()
     session.commit()
     session.close()
+
+def async_dissect(bot, chat_id, *args) -> None:
+    error, chain = get_chain_from_server(*args)
+    if error:
+        error_msg += f'Error: {error}\n'
+        return
+    send_message_to_user(bot, chat_id=chat_id, text=f'Got {len(chain)} certificates in chain\n')
+    message = ''
+    for cert in chain:
+        message += cert_to_text(cert, True)
+    
+    send_long_message(bot, chat_id, message)
 
 
 def main() -> None:
