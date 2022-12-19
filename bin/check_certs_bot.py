@@ -591,14 +591,15 @@ def async_check_cert(bot, chat_id, db, url, *args) -> None:
     session.close()
 
 def async_dissect(bot, chat_id, *args) -> None:
-    error, chain = get_chain_from_server(*args)
+    error, chain = get_chain_from_server(args[0], args[1], int(args[2]), args[3])
     if error:
-        error_msg += f'Error: {error}\n'
+        send_message_to_user(bot, chat_id=chat_id, text=f'Error: {error}\n')
         return
-    send_message_to_user(bot, chat_id=chat_id, text=f'Got {len(chain)} certificates in chain\n')
+    send_message_to_user(bot, chat_id=chat_id,
+            text=f'Got {len(chain)} certificates in chain\n')
     message = ''
     for cert in chain:
-        message += cert_to_text(cert, True)
+        message += cert_to_text(cert, True) + '\n\n'
     
     send_long_message(bot, chat_id, message)
 
