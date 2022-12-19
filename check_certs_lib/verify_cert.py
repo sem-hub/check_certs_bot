@@ -64,23 +64,20 @@ def verify_cert(certs_to_check: Union[list[crypto.X509], crypto.X509]) -> str:
     '''
     error: str = ''
     store = crypto.X509Store()
-    if isinstance(certs_to_check, list):
-        certs = certs_to_check.copy()
-        cert = certs.pop(0)
-        # Recursive check all certificates in the chain
-        for crt in certs:
-            err = verify_cert(crt)
-            if not err:
-                store.add_cert(crt)
-    else:
-        cert = certs_to_check
-
     # Read CA cetrs from a bundle
     with open(certifi.where(), 'rb') as ca_f:
         raw_ca = ca_f.read()
     for ca_cert in pem.parse(raw_ca):
         store.add_cert(crypto.load_certificate(crypto.FILETYPE_PEM,
                                                 ca_cert.as_bytes()))
+    if isinstance(certs_to_check, list):
+        certs = certs_to_check.copy()
+        cert = certs.pop(0)
+        # Recursive check all certificates in the chain
+        for crt in certs:
+            store.add_cert(crt)
+    else:
+        cert = certs_to_check
 
 # Need we very strict checking flags?
 #    store.set_flags(crypto.X509StoreFlags.X509_STRICT |
