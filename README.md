@@ -21,10 +21,10 @@ pip install dist/check_certs_bot-*.tar.gz
 
 check_certs_bot.py - The bot itself. Does not daemonify.
 
-Register own bot with BotFather, put a token in /var/spool/check_certs/TOKEN file and run.
+Register own bot with BotFather, put a token in check-certs.ini file and run.
 Use /start and /help for getting help.
 
-You can use check-certs-bot.service for run it with systemd.
+You can use check-certs-bot.service for run it with systemd. Edit it for correct pathes.
 ```bash
 cp check-certs-bot.service /etc/systemd/system
 systemctl daemon-reload
