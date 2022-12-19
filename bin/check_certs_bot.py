@@ -17,7 +17,7 @@ The bot supports this commands:
     /list - get list all records for this user.
     /reset - to remove all records for this user.
     /hold, /unhold - stop/restore checks for this URL.
-    /timezone - set users' timezone.
+    /timezone - show|set users' timezone.
     /id - show user's ID.
 
 An user can see only URLs he added.
@@ -72,7 +72,7 @@ or a command:
 /unhold \\[_protocol_://]_hostname_\\[_:port_]  - continue checking this entry.
 /remove \\[_protocol_://]hostname\\[:_port_] - remove an entry from periodical checking list.
 /reset  - reset all periodical checking list (WARNINNG! No confirm will be provided).
-/timezone [+-N] - set timezone correction from UTC. In hours.
+/timezone [+-N] - show or set timezone correction from UTC. In hours.
 
 Allowed protocols: any of listed in /etc/services.
 
@@ -213,7 +213,7 @@ class CheckCertBot:
                 logging.warning('banned: %s. %s.', message.chat_id, cmd)
                 allowed = False
             else:
-                # Flood protect
+                # Flood protect: one command per second
                 if len(activity_res) > 0:
                     logging.warning('Flood activity: %s - %d times per '
                                     'seconds. Blocked.', message.chat_id, len(activity_res))
@@ -283,26 +283,34 @@ class CheckCertBot:
         user = session.query(Users).filter(Users.id == chat_id).one()
         tz = user.timezone
         session.close()
-        # Fields to show. For "full" and "short" list.
+        # Fields to show. For "normal" and "short" list.
         fields: tuple = (
             'when_added', 'url', 'warn_before_expired',
             'last_checked', 'status')
         if len(args) > 0 and args[0] == 'short':
             fields = ('url', 'last_checked', 'status')
+        # /list details command only for users with role admin ('status' field in DB)
+        if user.status.lower() == 'admin' and len(args) > 0 and args[0] == 'details':
+            fields = ('chat_id', 'when_added', 'url', 'warn_before_expired',
+            'last_checked', 'status', 'last_ok')
 
         session = self.db.get_session()
         query_res = session.query(Servers).filter(Servers.chat_id == chat_id)
+        # All records for admin for /list details command
+        if user.status.lower() == 'admin'and len(args) > 0 and args[0] == 'details':
+            query_res = session.query(Servers)
 
         output: list = []
         line = '|'.join(fields)
         output.append('<b>' + line + '</b>')
         dt_re = re.compile(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d')
-        # XXX convert datetime to localzone from UTC
+        
         for res in query_res:
             line = ''
             for field in fields:
                 val = str(getattr(res, field))
                 if dt_re.match(val):
+                    # convert datetime to localzone from UTC
                     val = datetime_to_user_tz_str(val, tz)
                 line += val + '|'
             line = line[:-1]
@@ -468,34 +476,43 @@ class CheckCertBot:
             return
 
         chat_id = str(update.message.chat_id)
-        if len(args) != 1:
+        if len(args) > 1:
             send_message_to_user(context.bot, chat_id=chat_id,
-                                text='Only one argument allowed and mandatory: +-N')
+                                text='Only one argument allowed: +-N')
             return
 
-        failure = False
-        if not (args[0][0] in '+-' or args[0][0].isdigit()):
-            failure = True
-        tz = 0
-        try:
-            tz = int(args[0])
-        except ValueError:
-            failure = True
+        if len(args) != 0:
+            failure = False
+            if not (args[0][0] in '+-' or args[0][0].isdigit()):
+                failure = True
+            tz = 0
+            try:
+                tz = int(args[0])
+            except ValueError:
+                failure = True
 
-        if abs(tz) > 12:
-            failure = True
+            if abs(tz) > 12:
+                failure = True
 
-        if failure:
-            send_message_to_user(context.bot, chat_id=chat_id,
-                                text='An argument must be: [+-]N. Where N is an integer '
-                                'from 0 to 12.')
-            return
+            if failure:
+                send_message_to_user(context.bot, chat_id=chat_id,
+                                    text='An argument must be: [+-]N. Where N is an integer '
+                                    'from 0 to 12.')
+                return
 
-        session = self.db.get_session()
-        user = session.query(Users).filter(Users.id == chat_id).one()
-        user.timezone = tz
-        session.commit()
-        session.close()
+            session = self.db.get_session()
+            user = session.query(Users).filter(Users.id == chat_id).one()
+            user.timezone = tz
+            session.commit()
+            session.close()
+        else:
+            # There is no argument, show current TZ
+            session = self.db.get_session()
+            user = session.query(Users).filter(Users.id == chat_id).one()
+            tz = user.timezone
+            session.commit()
+            session.close()
+
         send_message_to_user(context.bot, chat_id=chat_id,
                             text=f'Timezone set as UTC{tz:+d}')
 
