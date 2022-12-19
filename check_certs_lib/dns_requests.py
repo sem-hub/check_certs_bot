@@ -79,7 +79,7 @@ def get_authority_ns_for(dname: str) -> dict[str, list[str]]:
     Need for get_dnssec_request().
 
     Returns: dict[zone] -> autority servers' adresses for the zone
-             only one elemeint in the dictionary always
+            only one elemeint in the dictionary always
     '''
     logger = logging.getLogger(__name__ + '.get_authority_ns_for')
     dlevel = dname.split('.')
@@ -157,8 +157,8 @@ def get_dnssec_request(dname: str, rtype: str) -> list:
     i = 1
     # Try all servers if any error occured
     while response[0].rcode() != dns.rcode.NOERROR and \
-          len(response[0].answer) != 2 and \
-          i < len(nsaddr):
+            len(response[0].answer) != 2 and \
+            i < len(nsaddr):
         try:
             response = dns.query.udp_with_fallback(request, nsaddr[i],
                     timeout=TIMEOUT)
@@ -194,8 +194,8 @@ def get_dnssec_request(dname: str, rtype: str) -> list:
     i = 1
     # Try all servers if any error occured
     while response[0].rcode() != dns.rcode.NOERROR and \
-          len(response[0].answer) < 2 and \
-          i < len(nsaddr):
+            len(response[0].answer) < 2 and \
+            i < len(nsaddr):
         response = dns.query.udp_with_fallback(request, nsaddr[i])
         i += 1
     if response[0].rcode() != dns.rcode.NOERROR:
