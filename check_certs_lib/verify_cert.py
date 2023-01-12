@@ -51,8 +51,7 @@ def match_domain(fqdn: str, cert: crypto.X509) -> bool:
             return True
         if '*' in domain:
             rxp = '^' + domain.replace('.',r'\.').replace('*',r'[^\.]+') + '$'
-            rec = re.compile(rxp)
-            if rec.match(fqdn):
+            if re.match(rxp, fqdn):
                 return True
     return False
 
