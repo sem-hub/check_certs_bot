@@ -8,3 +8,4 @@ c.ini
 bin/generate_tlsa.txt
 config.ini
 .vscode/
+venv/
