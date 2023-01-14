@@ -1,10 +1,11 @@
+alembic		# SQLAlchemy based migrations
 certifi 	# Just for a case. python-telegram-bot use it too
 cryptography    # for DNSSEC
 dnspython>=2.0.0        # after query() -> reslove() method renamed
 ocsp-checker
 pem
 pyOpenSSL
-python-telegram-bot>13.0.0
+python-telegram-bot>13.0.0,<20.0.0
 sqlalchemy
 rpyc
 timeout-function-decorator       # To fight with unbreakable OpenSSL.do_handshake()
