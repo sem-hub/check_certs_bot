@@ -8,14 +8,14 @@ import socket
 from typing import Optional
 
 from OpenSSL import SSL, crypto
-import timeout_decorator
+from timeout_function_decorator import timeout
 
 
 TIMEOUT = 5
 NULL = ''
 NoResult: list = []
 
-@timeout_decorator.timeout(TIMEOUT)
+@timeout(TIMEOUT)
 def do_handshake_with_timeout(conn: SSL.Connection):
     '''
     A stock do_handshake() can't make stop on timeout. It hangs forever.
@@ -78,7 +78,7 @@ def get_chain_from_server(hostname: str, addr: str, port: int, proto: str
         conn.setblocking(1)
         conn.set_tlsext_host_name(hostname.encode())
         do_handshake_with_timeout(conn)
-    except (SSL.Error, timeout_decorator.TimeoutError) as err:
+    except (SSL.Error, TimeoutError) as err:
         conn.close()
         return (f'{addr}: SSL do_handshake error: {str(err)}', NoResult)
     # Get unverified certificate in binary form
